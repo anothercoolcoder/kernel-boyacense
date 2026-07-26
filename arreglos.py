@@ -1,43 +1,35 @@
 from pathlib import Path
-from docling.document_converter import DocumentConverter,InputFormat
-
-input_dir = Path("./documentos_entrada")
-output_dir = Path(".documentos_salida")
-
-output_dir.mkdir(parents=True, exist_ok=True)
+from docling.document_converter import DocumentConverter
 
 converter = DocumentConverter()
 
-extensiones_soportadas = {
-    ext 
-    for fmt in InputFormat
-    for ext in fmt.supported_file_extensions
-}
+paths = list(Path("/home/anothercoolcoder/pdfs").glob("*.pdf")) # directorio de archivos con la extension .pdf
 
-archivos = [
-    f for f in input_dir.iterdir()
-    if f.is_file() and f.suffix.lower() in extensiones_soportadas
-]
+resultados = {}
 
-print(f"Se encontraron {len(archivos)} archivos compatibles con Docling.\n")
+for result in converter.convert_all(paths):
+    doc = result.document
 
+    texto = doc.export_to_markdown()
 
-# converter = DocumentConverter()
-# result = converter.convert(source)
-# doc = result.document
+    parrafos = [
+        p.replace("\t", " ").strip() 
+        for p in texto.split("\n\n") 
+        if p.strip()
+    ]
+    tablas = [
+        table.export_to_dataframe(doc).values.tolist()
+        for table in doc.tables
+    ]
 
-# parrafos = [item.text for item in doc.texts]
+    nombre_archivo = result.input.file.name
 
-# tablas = []
+    resultados[nombre_archivo] = {
+        "parrafos": parrafos,
+        "tablas": tablas
+    }
 
-# for table in doc.tables:
-    # df = table.export_to_dataframe()
-    # tablas.append(df.values.tolist())
-
-# print(f"Total de párrafos extraídos: {len(parrafos)}")
-# print("\nPrimeros 3 párrafos:")
-# print(parrafos[:3])
-
-# if tablas:
-    # print("\nPrimera tabla extraída como arreglo de filas:")
-    # print(tablas[0])
+if resultados:
+    primer_doc = next(iter(resultados))
+    print(f"-- Párrafos de {primer_doc}")
+    print(resultados[primer_doc]["parrafos"][:2])
