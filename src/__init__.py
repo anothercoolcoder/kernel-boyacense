@@ -1,0 +1,1 @@
+# kernel-boyacense — Buscador semántico

@@ -1,0 +1,16 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+
+# Test output directories
+src/tests/output/
+src/tests/output_files/
+
+# Temporary files
+.~lock.*

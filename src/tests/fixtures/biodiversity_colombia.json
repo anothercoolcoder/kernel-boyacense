@@ -1,0 +1,23 @@
+{
+    "title": "Biodiversity of Colombia",
+    "author": "Environmental Research Institute",
+    "date": "2024-03-15",
+    "sections": [
+        {
+            "heading": "Overview",
+            "content": "Colombia is one of the most biodiverse countries on the planet. It ranks first in bird and orchid species diversity, and second in plants, butterflies, freshwater fishes, and amphibians. The country's unique geography, spanning from Caribbean and Pacific coastlines through Andean mountains to Amazonian rainforests, creates an extraordinary variety of ecosystems."
+        },
+        {
+            "heading": "Endemic Species",
+            "content": "The country is home to approximately 56,343 species of plants, of which about 7,881 are endemic. Colombia hosts around 1,900 bird species, representing nearly 20% of the world's total. The golden poison frog (Phyllobates terribilis), found exclusively in the Pacific rainforests of Colombia, is considered one of the most toxic animals on Earth. The spectacled bear (Tremarctos ornatus), the only bear species in South America, inhabits the cloud forests of the Colombian Andes."
+        },
+        {
+            "heading": "Conservation Challenges",
+            "content": "Despite its incredible biodiversity, Colombia faces significant conservation challenges. Deforestation, particularly in the Amazon and Pacific regions, threatens numerous species. The illegal wildlife trade continues to impact populations of parrots, primates, and reptiles. Climate change is affecting high-altitude ecosystems like páramos, which serve as critical water sources for millions of Colombians. However, the country has made progress through the establishment of national parks and protected areas covering approximately 15% of its territory."
+        },
+        {
+            "heading": "Marine Biodiversity",
+            "content": "Colombia's marine biodiversity is equally impressive. The Malpelo Island, a UNESCO World Heritage Site, serves as a critical habitat for sharks, giant groupers, and other marine species. The coral reefs of the Rosario Islands support hundreds of fish species and are vital for coastal protection. The country's Pacific coast is an important migration corridor for humpback whales, which travel from Antarctica to breed in the warm Colombian waters between July and November each year."
+        }
+    ]
+}
