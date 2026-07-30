@@ -1,5 +1,6 @@
 import argparse
 import json
+from math import ceil
 from pathlib import Path
 import numpy as np
 import spacy
@@ -7,6 +8,11 @@ from sentence_transformers import SentenceTransformer
 from docling.document_converter import DocumentConverter
 from PIL import Image
 import easyocr
+
+try:
+    from pyrosm import OSM
+except ImportError:
+    OSM = None
 
 # --------------------------------------------------
 # 1. CONFIGURACIÓN DE MODELOS
@@ -342,6 +348,153 @@ def procesar_pdf(pdf_path: str) -> dict:
 
 
 # --------------------------------------------------
+# 3-BIS. PROCESAMIENTO Y PARSEO DE ARCHIVOS .PBF (OpenStreetMap) CON PYROSM
+# --------------------------------------------------
+def procesar_pbf(pbf_path: str, chunk_size: int = 200) -> dict:
+    """
+    Procesa un archivo .pbf (extracto de OpenStreetMap) usando la librería
+    Pyrosm.
+
+    A diferencia de un PDF (que se parte en oraciones/párrafos), un .pbf
+    contiene entidades geoespaciales (edificios, vías, POIs, límites
+    administrativos). Aquí el equivalente a "párrafo" es un FRAGMENTO:
+    un lote (CHUNK) de `chunk_size` entidades de una misma capa, con una
+    descripción textual breve que luego se puede reutilizar para
+    embeddings/LLMs igual que con los chunks semánticos de texto.
+    """
+    if OSM is None:
+        raise ImportError(
+            "La librería 'pyrosm' no está instalada. Instálala con: "
+            "pip install pyrosm"
+        )
+
+    osm = OSM(pbf_path)
+
+    salida = {
+        "paragraphs": [],
+        "semantic_chunks": [],
+        "tables": [],
+        "images": [],
+        "equations": [],
+        "layers_summary": {},
+        "fragments": [],
+    }
+
+    # --- A. EXTRAER LAS CAPAS DISPONIBLES DEL .PBF ---
+    capas_extractoras = {
+        "buildings": lambda: osm.get_buildings(),
+        "network_driving": lambda: osm.get_network(network_type="driving"),
+        "pois": lambda: osm.get_pois(),
+        "boundaries": lambda: osm.get_boundaries(),
+    }
+
+    capas_datos = {}
+    for nombre_capa, extractor in capas_extractoras.items():
+        try:
+            gdf = extractor()
+        except Exception as e:
+            print(f"  Nota: no se pudo extraer la capa '{nombre_capa}': {e}")
+            gdf = None
+        capas_datos[nombre_capa] = gdf
+
+    # --- B. RESUMEN AL COMIENZO: cuántos fragmentos/chunks se generarán ---
+    total_features = 0
+    total_chunks_previstos = 0
+
+    for nombre_capa, gdf in capas_datos.items():
+        n_features = 0 if gdf is None or gdf.empty else len(gdf)
+        n_chunks = ceil(n_features / chunk_size) if n_features else 0
+        salida["layers_summary"][nombre_capa] = {
+            "features": n_features,
+            "chunks_previstos": n_chunks,
+        }
+        total_features += n_features
+        total_chunks_previstos += n_chunks
+
+    print("\n====================")
+    print(f"RESUMEN INICIAL DE EXTRACCIÓN PBF: {Path(pbf_path).name}")
+    print("====================")
+    print(f"Entidades OSM encontradas   : {total_features}")
+    print(f"Fragmentos/chunks previstos : {total_chunks_previstos} "
+          f"(tamaño de chunk = {chunk_size} entidades)")
+    for nombre_capa, info in salida["layers_summary"].items():
+        print(f"  - {nombre_capa:<16}: {info['features']:>7} entidades -> "
+              f"{info['chunks_previstos']:>4} chunks")
+    print("====================\n")
+
+    # --- C. GENERAR FRAGMENTOS (CHUNKS) POR CAPA ---
+    print("====================")
+    print("FRAGMENTOS Y CHUNKS POR CAPA")
+    print("====================")
+
+    contador_fragmento = 1
+    for nombre_capa, gdf in capas_datos.items():
+        if gdf is None or gdf.empty:
+            continue
+
+        print(f"\n--- Capa: {nombre_capa} ({len(gdf)} entidades) ---")
+
+        columnas_relevantes = [c for c in gdf.columns if c != "geometry"][:8]
+
+        for inicio in range(0, len(gdf), chunk_size):
+            lote = gdf.iloc[inicio:inicio + chunk_size]
+            indice_chunk = inicio // chunk_size + 1
+
+            # Un par de ejemplos legibles para describir el chunk
+            ejemplos = []
+            for _, fila in lote.head(3).iterrows():
+                nombre = fila.get("name") if "name" in lote.columns else None
+                descriptor = (
+                    nombre if isinstance(nombre, str) and nombre.strip()
+                    else str(fila.get("id", "sin-id"))
+                )
+                ejemplos.append(descriptor)
+
+            contenido_texto = (
+                f"Capa '{nombre_capa}', chunk {indice_chunk}: "
+                f"{len(lote)} entidades. Ejemplos: "
+                f"{', '.join(ejemplos) if ejemplos else 'N/A'}."
+            )
+
+            try:
+                datos_lote = json.loads(
+                    lote[columnas_relevantes].to_json(orient="records")
+                ) if columnas_relevantes else []
+            except Exception as e:
+                print(f"    Nota: no se pudo serializar el chunk {indice_chunk}: {e}")
+                datos_lote = []
+
+            fragmento = {
+                "fragment_index": contador_fragmento,
+                "layer": nombre_capa,
+                "chunk_index": indice_chunk,
+                "feature_count": len(lote),
+                "columns": columnas_relevantes,
+                "content": contenido_texto,
+                "data": datos_lote,
+            }
+
+            salida["fragments"].append(fragmento)
+            print(f"  [Fragmento {contador_fragmento}] {contenido_texto}")
+            contador_fragmento += 1
+
+    # --- D. CHUNKS SEMÁNTICOS SOBRE LAS DESCRIPCIONES DE LOS FRAGMENTOS ---
+    print("\n====================")
+    print("GENERANDO CHUNKS SEMÁNTICOS (sobre descripciones de fragmentos OSM)")
+    print("====================")
+
+    descripciones = [f["content"] for f in salida["fragments"]]
+    semantic_chunks = generar_chunks_semanticos(descripciones, threshold=0.65)
+    salida["semantic_chunks"] = semantic_chunks
+
+    for idx, chk in enumerate(semantic_chunks, 1):
+        print(f"\n--- Chunk Semántico {idx} ({chk['sentence_count']} fragmentos agrupados) ---")
+        print(chk["content"])
+
+    return salida
+
+
+# --------------------------------------------------
 # 4. UTILIDADES PARA MANEJAR RUTAS (ARCHIVO O CARPETA)
 # --------------------------------------------------
 # Docling detecta el formato automáticamente según la extensión del archivo,
@@ -355,7 +508,7 @@ EXTENSIONES_SOPORTADAS = {
     ".html",
     ".htm",
     ".csv",
-    ".pbf",    # incluido por si aplica; si Docling no lo reconoce, se reporta como error puntual
+    ".pbf",    # extractos de OpenStreetMap, procesados con Pyrosm (no con Docling)
 }
 
 
@@ -393,13 +546,20 @@ def resolver_lista_archivos(ruta: Path, recursivo: bool = False) -> list[Path]:
     raise FileNotFoundError(f"La ruta '{ruta}' no existe.")
 
 
-def procesar_y_guardar(pdf_path: Path, carpeta_salida: Path) -> None:
-    """Procesa un único archivo (cualquier formato soportado por Docling) y guarda su JSON correspondiente."""
+def procesar_y_guardar(pdf_path: Path, carpeta_salida: Path, chunk_size: int = 200) -> None:
+    """Procesa un único archivo y guarda su JSON correspondiente.
+
+    Los .pbf (OpenStreetMap) se procesan con Pyrosm; el resto de formatos
+    soportados (.pdf, .json, .md, .xlsx, .html, .csv) se procesan con Docling.
+    """
     print("\n" + "#" * 60)
     print(f"# PROCESANDO: {pdf_path}")
     print("#" * 60)
 
-    datos = procesar_pdf(str(pdf_path))
+    if pdf_path.suffix.lower() == ".pbf":
+        datos = procesar_pbf(str(pdf_path), chunk_size=chunk_size)
+    else:
+        datos = procesar_pdf(str(pdf_path))
 
     if isinstance(datos, dict) and any(datos.values()):
         carpeta_salida.mkdir(parents=True, exist_ok=True)
@@ -416,6 +576,12 @@ def procesar_y_guardar(pdf_path: Path, carpeta_salida: Path) -> None:
         print(f"Tablas            : {len(datos['tables'])}")
         print(f"Figuras (diagr.)  : {len(datos['images'])}")
         print(f"Ecuaciones        : {len(datos['equations'])}")
+
+        if datos.get('layers_summary'):
+            print(f"Fragmentos OSM    : {len(datos.get('fragments', []))}")
+            print(f"\n  Capas OSM procesadas:")
+            for capa, info in datos['layers_summary'].items():
+                print(f"    - {capa:<16}: {info['features']:>7} entidades en {info['chunks_previstos']:>4} chunks")
 
         if datos['equations']:
             print(f"\n  Ecuaciones detectadas:")
@@ -465,6 +631,13 @@ def main():
         action="store_true",
         help="Si la ruta es una carpeta, buscar documentos también en subcarpetas.",
     )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=200,
+        help="Tamaño de lote (número de entidades OSM) por fragmento/chunk "
+             "al procesar archivos .pbf. Default: 200",
+    )
 
     args = parser.parse_args()
     ruta = Path(args.ruta)
@@ -481,7 +654,7 @@ def main():
     errores = []
     for archivo_path in archivos:
         try:
-            procesar_y_guardar(archivo_path, carpeta_salida)
+            procesar_y_guardar(archivo_path, carpeta_salida, chunk_size=args.chunk_size)
         except Exception as e:
             print(f" Error procesando '{archivo_path.name}': {e}")
             errores.append((archivo_path.name, str(e)))
