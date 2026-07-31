@@ -1,0 +1,19 @@
+pymupdf4llm
+pymupdf
+numpy
+beautifulsoup4
+lxml
+pandas
+openpyxl
+Pillow
+# pytesseract requiere el binario de Tesseract-OCR instalado aparte (no es paquete pip):
+# Windows: https://github.com/UB-Mannheim/tesseract/wiki (default: C:\Program Files\Tesseract-OCR)
+# Linux: apt install tesseract-ocr | macOS: brew install tesseract
+pytesseract
+rapidocr-onnxruntime
+nltk
+transformers
+sentence-transformers
+faiss-cpu
+mapbox-vector-tile
+pyrosm

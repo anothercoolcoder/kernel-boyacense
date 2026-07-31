@@ -29,12 +29,15 @@ Reglas de diseño:
 from __future__ import annotations
 
 import logging
+import re
+from collections import Counter
 from typing import Any, Dict, Iterable, List, Sequence
 
 __all__ = [
     "Fragmento",
     "MAX_TOKENS",
     "MODELO_TOKENIZADOR",
+    "detectar_idioma",
     "fragmentar",
     "fragmentar_registros",
     "contar_tokens",
@@ -54,8 +57,21 @@ MODELO_TOKENIZADOR = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v
 #: Oraciones que se repiten al inicio del fragmento siguiente.
 SOLAPE_ORACIONES = 1
 
-#: Idioma de las reglas de segmentación de NLTK.
+#: Idioma por defecto de las reglas de segmentación de NLTK, cuando la
+#: detección no alcanza a decidir (textos muy cortos o sin palabras comunes).
 IDIOMA = "spanish"
+
+#: Palabras funcionales de alta frecuencia por idioma del corpus (es/en/pt).
+#: Solo hay que distinguir entre estos tres para elegir el modelo Punkt, así
+#: que un conteo de stopwords basta y evita una dependencia de detección de
+#: idioma. Se eligen palabras que NO se solapan entre los tres idiomas.
+_MARCAS_IDIOMA = {
+    "spanish": ("el", "los", "las", "del", "una", "por", "con", "para", "pero", "más", "año"),
+    "english": ("the", "of", "and", "to", "is", "are", "with", "from", "this", "that", "which"),
+    "portuguese": ("os", "as", "dos", "das", "uma", "com", "não", "são", "mais", "para", "pelo"),
+}
+
+_PALABRAS = re.compile(r"[^\W\d_]+", re.UNICODE)
 
 
 # --------------------------------------------------------------------------- #
@@ -90,7 +106,30 @@ def contar_tokens(texto: str, tokenizador: Any = None) -> int:
 # --------------------------------------------------------------------------- #
 # Segmentación en oraciones
 # --------------------------------------------------------------------------- #
-def _oraciones(texto: str) -> List[str]:
+def detectar_idioma(texto: str) -> str:
+    """Devuelve el idioma Punkt ('spanish', 'english' o 'portuguese') del texto.
+
+    El corpus del reto mezcla los tres idiomas y cada uno tiene sus propias
+    abreviaturas: el Punkt español corta dentro de "Dr. Smith" o "U.S. Army"
+    porque no conoce esas formas, y eso parte oraciones a la mitad —
+    justo lo que la especificación prohíbe (§3.3).
+
+    Cuenta palabras funcionales exclusivas de cada idioma. No hace falta un
+    detector general: solo hay que elegir entre tres segmentadores, y la
+    decisión es robusta con unas pocas decenas de palabras de texto.
+    """
+    palabras = Counter(p.lower() for p in _PALABRAS.findall(texto))
+    if not palabras:
+        return IDIOMA
+    puntajes = {
+        idioma: sum(palabras[m] for m in marcas)
+        for idioma, marcas in _MARCAS_IDIOMA.items()
+    }
+    mejor = max(puntajes, key=lambda k: puntajes[k])
+    return mejor if puntajes[mejor] else IDIOMA
+
+
+def _oraciones(texto: str, idioma: str | None = None) -> List[str]:
     """Parte el texto en oraciones con NLTK (Punkt), descargando el modelo si falta.
 
     Punkt entiende que "Fig. 1" o "et al." no terminan una oración, que es
@@ -98,12 +137,13 @@ def _oraciones(texto: str) -> List[str]:
     """
     import nltk
 
+    idioma = idioma or detectar_idioma(texto)
     try:
-        return nltk.sent_tokenize(texto, language=IDIOMA)
+        return nltk.sent_tokenize(texto, language=idioma)
     except LookupError:
         logger.info("Descargando el modelo Punkt de NLTK (una sola vez)")
         nltk.download("punkt_tab", quiet=True)
-        return nltk.sent_tokenize(texto, language=IDIOMA)
+        return nltk.sent_tokenize(texto, language=idioma)
 
 
 def _trozos_duros(oracion: str, limite: int, tokenizador: Any) -> List[str]:
@@ -172,6 +212,7 @@ def fragmentar(
     max_tokens: int = MAX_TOKENS,
     solape: int = SOLAPE_ORACIONES,
     tokenizador: Any = None,
+    idioma: str | None = None,
 ) -> List[tuple[str, int]]:
     """Parte un texto en fragmentos de ``<= max_tokens``, cortando por oración.
 
@@ -181,6 +222,8 @@ def fragmentar(
         solape: oraciones repetidas entre fragmentos consecutivos.
         tokenizador: tokenizador de HuggingFace; por defecto el de
             :data:`MODELO_TOKENIZADOR`.
+        idioma: idioma Punkt; por defecto se detecta con
+            :func:`detectar_idioma`.
 
     Returns:
         Lista de ``(texto_fragmento, tokens)`` en orden de lectura.
@@ -188,7 +231,7 @@ def fragmentar(
     tok = tokenizador or _tokenizador()
 
     oraciones: List[str] = []
-    for oracion in _oraciones(texto):
+    for oracion in _oraciones(texto, idioma):
         oracion = oracion.strip()
         if not oracion:
             continue
@@ -219,12 +262,15 @@ def fragmentar_registros(
 
     Conserva la procedencia (documento, página) de cada fragmento: sin ella el
     sistema puede recuperar el texto correcto pero no decir de dónde salió.
+    El idioma se detecta una vez por registro y queda marcado en la metadata,
+    que es lo que pide la especificación en §2.2.
     """
     tok = tokenizador or _tokenizador()
 
     fragmentos: List[Fragmento] = []
     for registro in registros:
-        trozos = fragmentar(registro["texto"], max_tokens, solape, tok)
+        idioma = detectar_idioma(registro["texto"])
+        trozos = fragmentar(registro["texto"], max_tokens, solape, tok, idioma)
         for orden, (texto, tokens) in enumerate(trozos, start=1):
             fragmentos.append(
                 {
@@ -234,6 +280,7 @@ def fragmentar_registros(
                     "metadata": {
                         **registro["metadata"],
                         "tokens": tokens,
+                        "idioma": idioma,
                         "fragmentos_pagina": len(trozos),
                     },
                 }
@@ -260,6 +307,22 @@ def _autoprueba() -> None:
     costos = [7, 3, 9, 1, 5, 5, 2]
     for grupo in _empacar(list("abcdefg"), costos, 12, 1):
         assert len(grupo) == 1 or sum(costos[i] for i in grupo) <= 12, grupo
+
+    # La detección solo tiene que acertar entre los tres idiomas del corpus.
+    assert detectar_idioma(
+        "El informe de la agencia describe los riesgos del entorno orbital "
+        "con más detalle que el año pasado, pero sin datos nuevos."
+    ) == "spanish"
+    assert detectar_idioma(
+        "The report of the agency describes the risks of the orbital "
+        "environment and the debris that is tracked from the ground."
+    ) == "english"
+    assert detectar_idioma(
+        "O relatório da agência descreve os riscos das órbitas com uma "
+        "análise dos detritos, não são dados novos, mais informação pelo site."
+    ) == "portuguese"
+    assert detectar_idioma("") == IDIOMA, "sin palabras cae al idioma por defecto"
+    assert detectar_idioma("123 456 ...") == IDIOMA
 
     try:
         tok = _tokenizador()

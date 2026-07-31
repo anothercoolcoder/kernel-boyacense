@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import unicodedata
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Sequence
 
@@ -266,6 +267,13 @@ def _ocr_tesseract(imagen: Any) -> tuple[str, float]:
         logger.warning("Sin motor OCR disponible (rapidocr-onnxruntime | pytesseract)")
         return "", 0.0
 
+    # ponytail: Windows no añade Tesseract al PATH por defecto; se apunta al
+    # binario en su ruta de instalación estándar si "tesseract" no es invocable.
+    if os.name == "nt" and not pytesseract.pytesseract.tesseract_cmd.lower().endswith(".exe"):
+        candidato = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+        if candidato.exists():
+            pytesseract.pytesseract.tesseract_cmd = str(candidato)
+
     try:
         img = Image.open(imagen) if isinstance(imagen, (str, Path)) else imagen
         datos = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
@@ -352,6 +360,18 @@ def _retencion(crudo: str, markdown: str) -> float:
     return len(presentes) / len(palabras)
 
 
+def _normalizar_texto_pdf(texto: str) -> str:
+    """Recompone acentos que pdfTeX emite como glifo suelto fuera de orden.
+
+    Algunas fuentes de LaTeX codifican "ñ" como el glifo de acento
+    MODIFIER LETTER TILDE (U+02DC) *antes* de la letra base ("Ni˜no" en vez
+    de "Niño"); NFC no lo arregla porque no es una marca combinante.
+    """
+    texto = unicodedata.normalize("NFC", texto)
+    texto = texto.replace("˜n", "ñ").replace("˜N", "Ñ")
+    return texto
+
+
 def _texto_crudo_pdf(ruta: Path) -> List[str]:
     """Texto plano por página vía PyMuPDF. Lista vacía si PyMuPDF no está."""
     try:
@@ -360,7 +380,7 @@ def _texto_crudo_pdf(ruta: Path) -> List[str]:
         return []
     try:
         with pymupdf.open(str(ruta)) as doc:
-            return [p.get_text().strip() for p in doc]
+            return [_normalizar_texto_pdf(p.get_text()).strip() for p in doc]
     except Exception as exc:
         logger.warning("Texto plano falló en %s: %s", ruta.name, exc)
         return []
