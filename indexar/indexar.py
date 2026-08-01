@@ -2,10 +2,10 @@ import os
 from pathlib import Path
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_chroma import Chroma
+from langchain_community.vectorstores import FAISS
 
 CARPETA_ENTRADA = "./salida"
-DB_DIR = "./chroma_db"
+FAISS_INDEX_DIR = "./faiss_index"
 MODELO_EMBEDDINGS = "intfloat/multilingual-e5-large-instruct"
 
 def cargar_y_procesar_markdowns(directorio_salida):
@@ -66,13 +66,15 @@ def main():
         }
     )
 
-    vector_store = Chroma.from_documents(
+    # Crear índice FAISS desde los documentos
+    vector_store = FAISS.from_documents(
         documents=chunks,
-        embedding=embeddings,
-        persist_directory=DB_DIR
+        embedding=embeddings
     )
 
-    print(f"Indexación completada. Guardado en: '{DB_DIR}'")
+    # Guardar el índice FAISS localmente en disco
+    vector_store.save_local(FAISS_INDEX_DIR)
+    print(f"Indexación FAISS completada. Guardado en: '{FAISS_INDEX_DIR}'")
 
 if __name__ == "__main__":
     main()

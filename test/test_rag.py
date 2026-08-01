@@ -1,13 +1,13 @@
 import os
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_chroma import Chroma
+from langchain_community.vectorstores import FAISS
 
-DB_DIR = "./chroma_db"
+FAISS_INDEX_DIR = "./faiss_index"
 MODELO_EMBEDDINGS = "intfloat/multilingual-e5-large-instruct"
 
 def probar_busqueda(pregunta: str, k: int = 3):
-    if not os.path.exists(DB_DIR):
-        print(f"La base de datos '{DB_DIR}' no existe.")
+    if not os.path.exists(FAISS_INDEX_DIR):
+        print(f"El directorio '{FAISS_INDEX_DIR}' no existe. Ejecuta primero indexar.py")
         return
 
     embeddings = HuggingFaceEmbeddings(
@@ -16,9 +16,11 @@ def probar_busqueda(pregunta: str, k: int = 3):
         encode_kwargs={'normalize_embeddings': True}
     )
 
-    vector_store = Chroma(
-        persist_directory=DB_DIR,
-        embedding_function=embeddings
+    # Cargar el índice FAISS previamente guardado
+    vector_store = FAISS.load_local(
+        FAISS_INDEX_DIR,
+        embeddings,
+        allow_dangerous_deserialization=True
     )
 
     instruccion = "Given a web search query, retrieve relevant passages that answer the query"
@@ -31,7 +33,7 @@ def probar_busqueda(pregunta: str, k: int = 3):
     print("="*80)
 
     for i, (doc, score) in enumerate(resultados, 1):
-        print(f"\n--- Resultado #{i} (Score: {score:.4f}) ---")
+        print(f"\n--- Resultado #{i} (Score Distancia L2: {score:.4f}) ---")
         print(f"Archivo: {doc.metadata.get('fuente', 'Desconocido')}")
         
         headers = [f"{k}: {v}" for k, v in doc.metadata.items() if k.startswith("Header")]
@@ -42,5 +44,5 @@ def probar_busqueda(pregunta: str, k: int = 3):
         print("-" * 80)
 
 if __name__ == "__main__":
-    pregunta_test = "Escribe aquí la consulta de prueba" 
+    pregunta_test = "¿Qué clínicas y entidades bancarias se encuentran indexadas en la zona?"
     probar_busqueda(pregunta_test, k=3)
