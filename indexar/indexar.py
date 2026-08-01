@@ -4,9 +4,6 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharac
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 
-# ------------------------------------------------------------------
-# CONFIGURACIÓN
-# ------------------------------------------------------------------
 CARPETA_ENTRADA = "./salida"
 DB_DIR = "./chroma_db"
 MODELO_EMBEDDINGS = "intfloat/multilingual-e5-large-instruct"
@@ -29,8 +26,6 @@ def cargar_y_procesar_markdowns(directorio_salida):
     )
 
     archivos_md = list(Path(directorio_salida).rglob("*.md"))
-    print(f"📂 Archivos .md encontrados en '{directorio_salida}': {len(archivos_md)}")
-
     documentos_procesados = []
 
     for ruta_archivo in archivos_md:
@@ -46,47 +41,38 @@ def cargar_y_procesar_markdowns(directorio_salida):
                 chunk.metadata["ruta_completa"] = str(ruta_archivo)
 
             documentos_procesados.extend(chunks_finales)
-            print(f"  ✓ Procesado: {ruta_archivo.name} ({len(chunks_finales)} chunks)")
-
         except Exception as e:
-            print(f"  ❌ Error procesando {ruta_archivo.name}: {e}")
+            print(f"Error procesando {ruta_archivo.name}: {e}")
 
     return documentos_procesados
 
-
 def main():
     if not os.path.exists(CARPETA_ENTRADA):
-        print(f"❌ La carpeta '{CARPETA_ENTRADA}' no existe. Créala y añade tus archivos .md")
+        print(f"La carpeta '{CARPETA_ENTRADA}' no existe.")
         return
 
-    print("\n--- 1. Cargando y dividiendo archivos Markdown ---")
     chunks = cargar_y_procesar_markdowns(CARPETA_ENTRADA)
 
     if not chunks:
-        print("⚠️ No se encontraron chunks para procesar.")
+        print("No se encontraron chunks para procesar.")
         return
 
-    print(f"\nTotal de chunks listos: {len(chunks)}")
-
-    print("\n--- 2. Cargando Modelo multilingual-e5-large-instruct ---")
-    # Configuración específica para el modelo e5-instruct
     embeddings = HuggingFaceEmbeddings(
         model_name=MODELO_EMBEDDINGS,
-        model_kwargs={'device': 'cpu'},  # Cambia a 'cuda' si usas GPU Nvidia
+        model_kwargs={'device': 'cpu'},
         encode_kwargs={
             'normalize_embeddings': True,
             'batch_size': 32
         }
     )
 
-    print("\n--- 3. Generando Embeddings e Indexando en ChromaDB ---")
     vector_store = Chroma.from_documents(
         documents=chunks,
         embedding=embeddings,
         persist_directory=DB_DIR
     )
 
-    print(f"✅ ¡Indexación completada exitosamente! Guardado en: '{DB_DIR}'")
+    print(f"Indexación completada. Guardado en: '{DB_DIR}'")
 
 if __name__ == "__main__":
     main()
