@@ -8,8 +8,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from extraccion import extraer_documento
-from fragmentacion import Fragmento, fragmentar_registros
+from extraccion.extraccion import extraer_documento
+from extraccion.fragmentacion import Fragmento, fragmentar_registros
 
 PDF_POR_DEFECTO = Path(__file__).parent / "tallerProbarBestStudent.pdf"
 
@@ -19,14 +19,15 @@ def generar_reporte(ruta_pdf: Path, salida: Path, fragmentos: list[Fragmento] | 
     if fragmentos is None:
         fragmentos = fragmentar_registros(extraer_documento(ruta_pdf))
 
-    paginas = len({f["pagina"] for f in fragmentos})
+    paginas = len({f["_meta"].get("pagina", 0) for f in fragmentos})
     lineas = [f"# Reporte de chunks — {ruta_pdf.name}\n"]
     lineas.append(f"Páginas: {paginas} · Fragmentos: {len(fragmentos)}\n")
 
     for f in fragmentos:
-        lineas.append(f"## Página {f['pagina']} · Fragmento {f['fragmento']}")
+        pagina = f["_meta"].get("pagina", "?")
+        lineas.append(f"## Página {pagina} · Fragmento {f['posicion']}")
         lineas.append(
-            f"*{f['metadata']['tokens']} tokens · origen: {f['metadata'].get('origen_texto', '?')}*\n"
+            f"*{f['num_tokens']} tokens · origen: {f['_meta'].get('origen_texto', '?')}*\n"
         )
         lineas.append("```")
         lineas.append(f["texto"])

@@ -31,6 +31,7 @@ from __future__ import annotations
 import logging
 import re
 from collections import Counter
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Sequence
 
 __all__ = [
@@ -38,6 +39,7 @@ __all__ = [
     "MAX_TOKENS",
     "MODELO_TOKENIZADOR",
     "detectar_idioma",
+    "inferir_fenomeno",
     "fragmentar",
     "fragmentar_registros",
     "contar_tokens",
@@ -47,12 +49,14 @@ logger = logging.getLogger(__name__)
 
 Fragmento = Dict[str, Any]
 
-#: Tokens útiles por fragmento: 512 de ventana menos [CLS] y [SEP].
-MAX_TOKENS = 510
+#: Tokens útiles por fragmento. El modelo e5-large-instruct añade un prefix de
+#: instrucción al embeber (~10 tokens); 500 + 12 especiales caben en la ventana
+#: de 512 sin truncamiento silencioso.
+MAX_TOKENS = 500
 
 #: Tokenizador por defecto. DEBE ser el del modelo de embeddings que se use
 #: en la etapa 3; contar con otro tokenizador da un presupuesto equivocado.
-MODELO_TOKENIZADOR = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+MODELO_TOKENIZADOR = "intfloat/multilingual-e5-large-instruct"
 
 #: Oraciones que se repiten al inicio del fragmento siguiente.
 SOLAPE_ORACIONES = 1
@@ -252,6 +256,43 @@ def fragmentar(
     return salida
 
 
+KEYWORDS_FENOMENO: Dict[int, List[str]] = {
+    1: ["inteligencia artificial", "ia", "militar", "defensa", "armas", "autónom", "autonom", "warfare", "military", "defense", "weapon", "combate", "fuerzas armadas"],
+    2: ["espacial", "espacio", "órbita", "orbita", "leo", "debris", "basura espacial", "satélite", "satelite", "orbital", "space", "satellite", "astronom", "cosmo"],
+    3: ["américa latina", "latina", "caribe", "territorial", "migración", "migracion", "gobernanza", "violencia", "colombia", "latinoamérica", "latinoamerica", "región", "region", "conflicto", "social"],
+}
+
+
+def inferir_fenomeno(ruta: Path | str, texto: str = "") -> int:
+    """Infiere el fenómeno temático (1, 2 o 3) garantizando nunca retornar None.
+
+    1. Busca 'fenomeno_1', 'fenomeno_2', 'fenomeno_3' en la ruta.
+    2. Si no lo encuentra, analiza coincidencia de palabras clave en la ruta y el texto.
+    3. Si hay empate o 0 coincidencias, por defecto asigna 1.
+    """
+    path_obj = Path(ruta)
+    for parte in path_obj.parts:
+        parte_lower = parte.lower()
+        if "fenomeno_1" in parte_lower or "fenomeno1" in parte_lower or parte_lower == "f1":
+            return 1
+        if "fenomeno_2" in parte_lower or "fenomeno2" in parte_lower or parte_lower == "f2":
+            return 2
+        if "fenomeno_3" in parte_lower or "fenomeno3" in parte_lower or parte_lower == "f3":
+            return 3
+
+    contenido = f"{path_obj.name} {texto[:5000]}".lower()
+    puntajes = {
+        fen: sum(contenido.count(kw) for kw in keywords)
+        for fen, keywords in KEYWORDS_FENOMENO.items()
+    }
+    max_score = max(puntajes.values())
+    if max_score > 0:
+        for fen, score in puntajes.items():
+            if score == max_score:
+                return fen
+    return 1
+
+
 def fragmentar_registros(
     registros: Iterable[Dict[str, Any]],
     max_tokens: int = MAX_TOKENS,
@@ -260,31 +301,80 @@ def fragmentar_registros(
 ) -> List[Fragmento]:
     """Aplica :func:`fragmentar` a los registros de :mod:`extraccion`.
 
-    Conserva la procedencia (documento, página) de cada fragmento: sin ella el
-    sistema puede recuperar el texto correcto pero no decir de dónde salió.
-    El idioma se detecta una vez por registro y queda marcado en la metadata,
-    que es lo que pide la especificación en §2.2.
+    La salida sigue el esquema estándar del pipeline (alineado con chunks.jsonl):
+
+    .. code-block:: json
+
+        {
+            "doc_id":    "DOC-0001",
+            "chunk_id":  "DOC-0001-chunk-000",
+            "fuente":    "fenomeno_1/archivo.pdf",
+            "formato":   "pdf",
+            "fenomeno":  1,
+            "posicion":  0,
+            "num_tokens": 487,
+            "texto":     "..."
+        }
+
+    ``posicion`` es 0-based y continuo por documento (no por página).
+    El idioma detectado y la metadata de procedencia se conservan en ``_meta``.
     """
+    from pathlib import Path
+    from extraccion.extraccion import _normalizar_formato, _obtener_fuente_relativa
+
     tok = tokenizador or _tokenizador()
 
     fragmentos: List[Fragmento] = []
+    posiciones_por_doc: Dict[str, int] = {}
+
     for registro in registros:
+        doc_id: str = registro.get("doc_id", "DOC-0000")
+        documento: str = registro.get("documento", "")
+        ruta_str: str = registro.get("ruta", "")
+
+        # 1.2: Sanear el campo fuente (ruta relativa estandarizada)
+        fuente: str = registro.get("fuente") or (
+            _obtener_fuente_relativa(Path(ruta_str)) if ruta_str else documento
+        )
+
+        # 1.3: Normalizar el campo formato a los canónicos
+        tipo_raw: str = registro.get("tipo", "")
+        formato: str = _normalizar_formato(tipo_raw, Path(fuente))
+
+        # 1.4: Inferencia y asignación garantizada del campo fenomeno (nunca None)
+        fenomeno_raw = registro.get("metadata", {}).get("fenomeno")
+        if fenomeno_raw in (1, 2, 3):
+            fenomeno = int(fenomeno_raw)
+        else:
+            fenomeno = inferir_fenomeno(fuente or ruta_str, registro.get("texto", ""))
+
         idioma = detectar_idioma(registro["texto"])
         trozos = fragmentar(registro["texto"], max_tokens, solape, tok, idioma)
-        for orden, (texto, tokens) in enumerate(trozos, start=1):
+
+        # 1.1: Contador continuo de posicion y chunk_id por doc_id
+        pos_inicio = posiciones_por_doc.get(doc_id, 0)
+        for i, (texto, tokens) in enumerate(trozos):
+            posicion = pos_inicio + i
             fragmentos.append(
                 {
-                    **registro,
-                    "fragmento": orden,
-                    "texto": texto,
-                    "metadata": {
-                        **registro["metadata"],
-                        "tokens": tokens,
+                    "doc_id":    doc_id,
+                    "chunk_id":  f"{doc_id}-chunk-{posicion:03d}",
+                    "fuente":    fuente,
+                    "formato":   formato,
+                    "fenomeno":  fenomeno,
+                    "posicion":  posicion,
+                    "num_tokens": tokens,
+                    "texto":     texto,
+                    # Metadata auxiliar de trazabilidad
+                    "_meta": {
+                        **registro.get("metadata", {}),
                         "idioma": idioma,
+                        "pagina": registro.get("pagina"),
                         "fragmentos_pagina": len(trozos),
                     },
                 }
             )
+        posiciones_por_doc[doc_id] = pos_inicio + len(trozos)
 
     logger.info("Fragmentación: %d fragmentos", len(fragmentos))
     return fragmentos
@@ -340,17 +430,24 @@ def _autoprueba() -> None:
     assert all(t <= 50 for _, t in fragmentar(largo, max_tokens=50, tokenizador=tok))
 
     registro = {
-        "documento": "d.pdf", "ruta": "/d.pdf", "tipo": "pdf", "pagina": 3,
+        "doc_id": "DOC-0001", "documento": "d.pdf", "ruta": "/d.pdf", "tipo": "pdf", "pagina": 3,
         "texto": texto, "metadata": {"origen_texto": "nativo"},
     }
     fragmentos = fragmentar_registros([registro], max_tokens=100, tokenizador=tok)
-    assert [f["fragmento"] for f in fragmentos] == list(range(1, len(fragmentos) + 1))
-    assert all(f["pagina"] == 3 and f["documento"] == "d.pdf" for f in fragmentos)
-    assert fragmentos[0]["metadata"]["origen_texto"] == "nativo", "metadata heredada"
+    assert [f["posicion"] for f in fragmentos] == list(range(len(fragmentos)))
+    assert all(f["_meta"]["pagina"] == 3 and f["fuente"] == "d.pdf" for f in fragmentos)
+    assert fragmentos[0]["_meta"]["origen_texto"] == "nativo", "metadata heredada"
+
+    # Prueba multi-página: posicion debe ser continua (0, 1, 2...) y chunk_id único
+    reg_p1 = {**registro, "pagina": 1, "texto": "Primera página del documento."}
+    reg_p2 = {**registro, "pagina": 2, "texto": "Segunda página del documento."}
+    frag_multi = fragmentar_registros([reg_p1, reg_p2], max_tokens=100, tokenizador=tok)
+    assert [f["posicion"] for f in frag_multi] == [0, 1]
+    assert [f["chunk_id"] for f in frag_multi] == ["DOC-0001-chunk-000", "DOC-0001-chunk-001"]
 
     assert fragmentar_registros([{**registro, "texto": "   "}], tokenizador=tok) == []
 
-    print(f"OK - {len(fragmentos)} fragmentos, max {max(f['metadata']['tokens'] for f in fragmentos)} tokens")
+    print(f"OK - {len(fragmentos)} fragmentos, max {max(f['num_tokens'] for f in fragmentos)} tokens")
 
 
 if __name__ == "__main__":

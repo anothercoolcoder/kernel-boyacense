@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import unicodedata
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Sequence
@@ -78,6 +79,68 @@ class FormatoNoSoportado(ErrorExtraccion):
 # Registro de extractores (punto de extensión: abierto/cerrado)
 # --------------------------------------------------------------------------- #
 _EXTRACTORES: Dict[str, Extractor] = {}
+
+
+# --------------------------------------------------------------------------- #
+# Registro de doc_id persistente (regla de negocio: ID fijo entre ejecuciones)
+# --------------------------------------------------------------------------- #
+#: Ruta al JSON que mapea ruta_absoluta_archivo → doc_id.
+#: Se sitúa en la raíz del proyecto (un nivel arriba de este módulo).
+DOC_ID_REGISTRY_PATH: Path = Path(__file__).resolve().parent.parent / "doc_id_registry.json"
+
+_registry_lock = threading.Lock()
+_registry_cache: Dict[str, str] | None = None
+_registry_counter: list[int] = [1]  # envuelto en lista para mutabilidad en closure
+
+
+def _cargar_registry() -> Dict[str, str]:
+    """Carga el registry del disco (una vez) y lo devuelve como dict."""
+    global _registry_cache
+    if _registry_cache is not None:
+        return _registry_cache
+    if DOC_ID_REGISTRY_PATH.exists():
+        try:
+            _registry_cache = json.loads(DOC_ID_REGISTRY_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            _registry_cache = {}
+    else:
+        _registry_cache = {}
+    # Ajusta el contador al siguiente número libre para evitar colisiones.
+    if _registry_cache:
+        nums = []
+        for v in _registry_cache.values():
+            try:
+                nums.append(int(v.split("-")[1]))
+            except (IndexError, ValueError):
+                pass
+        _registry_counter[0] = max(nums, default=0) + 1
+    return _registry_cache
+
+
+def _guardar_registry(registry: Dict[str, str]) -> None:
+    """Persiste el registry en disco de forma atómica."""
+    DOC_ID_REGISTRY_PATH.write_text(
+        json.dumps(registry, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def obtener_doc_id(ruta: Path) -> str:
+    """Devuelve el doc_id estable para ``ruta``, creándolo si no existe.
+
+    El id es inmutable entre ejecuciones: si el archivo ya fue visto, recibe
+    exactamente el mismo ``DOC-XXXX`` que la vez anterior.
+    """
+    clave = str(ruta.resolve())
+    with _registry_lock:
+        registry = _cargar_registry()
+        if clave not in registry:
+            nuevo_id = f"DOC-{_registry_counter[0]:04d}"
+            registry[clave] = nuevo_id
+            _registry_counter[0] += 1
+            _guardar_registry(registry)
+        return registry[clave]
+
 
 #: Extensiones tratadas como imagen rasterizada.
 EXTENSIONES_IMAGEN = (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp")
@@ -156,6 +219,55 @@ def _metadata_base(ruta: Path) -> Dict[str, Any]:
     }
 
 
+def _obtener_fuente_relativa(ruta: Path) -> str:
+    """Devuelve la ruta relativa de ``ruta`` respecto a la raíz del corpus provisto por ADL.
+
+    Si la ruta pertenece a ``corpus_adl``, devuelve la subruta en formato POSIX
+    (ej. ``fenomeno_1/doc.pdf``). Si no, devuelve ``ruta.name``.
+    """
+    parts = ruta.parts
+    if "corpus_adl" in parts:
+        idx = parts.index("corpus_adl")
+        rel_parts = parts[idx + 1 :]
+        if rel_parts:
+            return "/".join(rel_parts)
+    return ruta.name
+
+
+MAPA_FORMATOS = {
+    "markdown": "md",
+    "md": "md",
+    "html": "html",
+    "htm": "html",
+    "xhtml": "html",
+    "pdf": "pdf",
+    "txt": "txt",
+    "text": "txt",
+    "log": "txt",
+    "json": "json",
+    "csv": "csv",
+    "tsv": "csv",
+    "xlsx": "xlsx",
+    "xlsm": "xlsx",
+    "xls": "xlsx",
+    "pbf": "pbf",
+    "mvt": "pbf",
+    "gpkg": "gpkg",
+    "osm_pbf": "pbf",
+}
+
+
+def _normalizar_formato(tipo: str, ruta: Path) -> str:
+    """Normaliza el tipo de formato a los valores canónicos (§3.4)."""
+    t = tipo.lower()
+    if t in MAPA_FORMATOS:
+        return MAPA_FORMATOS[t]
+    sufijo = ruta.suffix.lstrip(".").lower()
+    if sufijo in MAPA_FORMATOS:
+        return MAPA_FORMATOS[sufijo]
+    return sufijo or t
+
+
 def _registro(
     ruta: Path,
     tipo: str,
@@ -163,11 +275,19 @@ def _registro(
     texto: str,
     metadata: Mapping[str, Any] | None = None,
 ) -> Registro:
-    """Construye un registro con el contrato de salida del módulo."""
+    """Construye un registro con el contrato de salida del módulo.
+
+    El campo ``doc_id`` se obtiene del registry persistente para garantizar
+    que el mismo archivo siempre recibe el mismo identificador, sin importar
+    cuántas veces se ejecute el pipeline (regla de negocio de ID fijo).
+    """
+    formato_norm = _normalizar_formato(tipo, ruta)
     return {
+        "doc_id": obtener_doc_id(ruta),
         "documento": ruta.name,
         "ruta": str(ruta.resolve()),
-        "tipo": tipo,
+        "fuente": _obtener_fuente_relativa(ruta),
+        "tipo": formato_norm,
         "pagina": pagina,
         "texto": texto,
         "metadata": {**_metadata_base(ruta), **(metadata or {})},
@@ -480,7 +600,7 @@ def extraer_md(ruta: Path) -> List[Registro]:
     encabezados = [
         linea.strip() for linea in texto.splitlines() if linea.lstrip().startswith("#")
     ]
-    return _utiles([_registro(ruta, "markdown", 1, texto, {"encabezados": encabezados})])
+    return _utiles([_registro(ruta, "md", 1, texto, {"encabezados": encabezados})])
 
 
 @registrar_extractor(".txt", ".text", ".log")
