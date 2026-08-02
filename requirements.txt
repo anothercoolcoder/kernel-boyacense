@@ -15,5 +15,8 @@ nltk
 transformers
 sentence-transformers
 faiss-cpu
+langchain-core
+langchain-huggingface
+langchain-community
 mapbox-vector-tile
 pyrosm
