@@ -1,7 +1,7 @@
 # Reporte de Estado y Diagnóstico Técnico — kernel-boyacense
 
 Para ver el **Informe de Análisis Técnico Completo y Matriz Detallada de TODOs** para la Etapa 1 del CODEFEST AD ASTRA 2026, consulte el documento:
- **[`context/informe_analisis_todos.md`](file:///home/jose/repositories/kernel-boyacense/context/informe_analisis_todos.md)**
+ **[`context/informe_analisis_todos.md`](informe_analisis_todos.md)**
 
 ---
 
