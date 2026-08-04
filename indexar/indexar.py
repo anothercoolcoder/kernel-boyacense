@@ -12,7 +12,10 @@ Cambios respecto al borrador original:
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import os
+from pathlib import Path
 from typing import List
 
 from langchain_core.documents import Document
@@ -55,19 +58,45 @@ def fragmentos_a_documentos(fragmentos: List[dict]) -> List[Document]:
         Lista de :class:`langchain_core.documents.Document` con metadata nativa.
     """
     documentos: List[Document] = []
-    for frag in fragmentos:
+    for idx, frag in enumerate(fragmentos):
+        # Mapeo flexible para metadatos anidados en _meta o metadata
+        meta_aux = frag.get("_meta") or frag.get("metadata") or {}
+
+        # 1. Obtener fuente desde la raíz o desde la metainformación anidada
+        fuente = (
+            frag.get("fuente")
+            or meta_aux.get("fuente")
+            or frag.get("source")
+            or meta_aux.get("source")
+            or "Desconocido"
+        )
+        if isinstance(fuente, Path):
+            fuente = str(fuente)
+
+        # 2. Obtener o autogenerar doc_id a partir del nombre del archivo
+        doc_id = frag.get("doc_id") or meta_aux.get("doc_id")
+        if not doc_id:
+            nombre_base = os.path.basename(fuente) if fuente != "Desconocido" else "doc"
+            doc_id = hashlib.md5(nombre_base.encode("utf-8")).hexdigest()[:8]
+
+        # 3. Obtener o autogenerar chunk_id secuencial
+        chunk_id = frag.get("chunk_id") or meta_aux.get("chunk_id") or f"{doc_id}_chunk_{idx}"
+
         metadata = {
-            "doc_id":    frag.get("doc_id", ""),
-            "chunk_id":  frag.get("chunk_id", ""),
-            "fuente":    frag.get("fuente", ""),
-            "formato":   frag.get("formato", ""),
-            "fenomeno":  frag.get("fenomeno"),
-            "posicion":  frag.get("posicion", 0),
-            "num_tokens": frag.get("num_tokens", 0),
+            "doc_id":    doc_id,
+            "chunk_id":  chunk_id,
+            "fuente":    fuente,
+            "formato":   frag.get("formato") or meta_aux.get("formato", ""),
+            "fenomeno":  frag.get("fenomeno") if frag.get("fenomeno") is not None else meta_aux.get("fenomeno"),
+            "posicion":  frag.get("posicion") or meta_aux.get("posicion", idx),
+            "num_tokens": frag.get("num_tokens") or meta_aux.get("num_tokens", 0),
             # Trazabilidad auxiliar (pagina, idioma, etc.)
-            **frag.get("_meta", {}),
+            **meta_aux,
         }
-        documentos.append(Document(page_content=frag["texto"], metadata=metadata))
+        
+        texto = frag.get("texto") or frag.get("page_content", "")
+        documentos.append(Document(page_content=texto, metadata=metadata))
+        
     return documentos
 
 

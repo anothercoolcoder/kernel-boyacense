@@ -29,7 +29,7 @@ logger = logging.getLogger("main")
 
 # ── Rutas base ─────────────────────────────────────────────────────────────── #
 BASE_DIR   = Path(__file__).parent
-CORPUS_ADL = BASE_DIR / "corpus_adl"
+CORPUS_ADL = BASE_DIR / "/home/anothercoolcoder/archive"
 FAISS_DIR  = str(BASE_DIR / "faiss_index")
 
 #: Mapeo de nombre de carpeta → número de fenómeno.
