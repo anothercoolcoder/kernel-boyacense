@@ -44,5 +44,5 @@ def probar_busqueda(pregunta: str, k: int = 3):
         print("-" * 80)
 
 if __name__ == "__main__":
-    pregunta_test = "¿Qué clínicas y entidades bancarias se encuentran indexadas en la zona?"
-    probar_busqueda(pregunta_test, k=3)
+    question = input("Ingrese pregunta para hacerle al sistema: ")
+    probar_busqueda(question, k=5)
