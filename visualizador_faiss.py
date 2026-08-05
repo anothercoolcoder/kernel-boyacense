@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import pickle
 import sys
 import urllib.parse
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -20,7 +19,7 @@ from typing import Any, Dict, List, Optional
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("visualizador")
 
-FAISS_DIR = Path(__file__).parent / "faiss_index"
+FAISS_DIR = Path(__file__).parent / "base_vectorial" / "encoder_multilingual-e5-large-instruct"
 PORT = 8501
 
 # Variables globales para cache en memoria
@@ -29,7 +28,7 @@ RESUMEN_STATS: Dict[str, Any] = {}
 
 
 def cargar_indice_y_metadatos():
-    """Carga los chunks y metadatos desde faiss_index/index.pkl."""
+    """Carga los chunks y metadatos desde metadata.jsonl."""
     global INDEX_DATA, RESUMEN_STATS
     from exportar_faiss import cargar_datos_faiss, generar_resumen_estadistico
 
