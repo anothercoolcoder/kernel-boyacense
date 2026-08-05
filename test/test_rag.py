@@ -1,14 +1,30 @@
 import os
+import json
+import numpy as np
+import faiss
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
 
-FAISS_INDEX_DIR = "./faiss_index"
+FAISS_DIR = "./base_vectorial/encoder_multilingual-e5-large-instruct"
 MODELO_EMBEDDINGS = "intfloat/multilingual-e5-large-instruct"
 
 def probar_busqueda(pregunta: str, k: int = 3):
-    if not os.path.exists(FAISS_INDEX_DIR):
-        print(f"El directorio '{FAISS_INDEX_DIR}' no existe. Ejecuta primero indexar.py")
+    index_path = os.path.join(FAISS_DIR, "index.faiss")
+    metadata_path = os.path.join(FAISS_DIR, "metadata.jsonl")
+
+    if not os.path.exists(index_path):
+        print(f"El archivo '{index_path}' no existe. Ejecuta primero el pipeline (python main.py)")
         return
+
+    # Cargar índice FAISS nativo
+    index = faiss.read_index(index_path)
+
+    # Cargar metadata
+    metadatos = []
+    with open(metadata_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                metadatos.append(json.loads(line))
 
     embeddings = HuggingFaceEmbeddings(
         model_name=MODELO_EMBEDDINGS,
@@ -16,31 +32,26 @@ def probar_busqueda(pregunta: str, k: int = 3):
         encode_kwargs={'normalize_embeddings': True}
     )
 
-    # Cargar el índice FAISS previamente guardado
-    vector_store = FAISS.load_local(
-        FAISS_INDEX_DIR,
-        embeddings,
-        allow_dangerous_deserialization=True
-    )
-
     instruccion = "Given a web search query, retrieve relevant passages that answer the query"
     query_formateada = f"Instruct: {instruccion}\nQuery: {pregunta}"
 
-    resultados = vector_store.similarity_search_with_score(query_formateada, k=k)
+    query_vector = np.array([embeddings.embed_query(query_formateada)], dtype=np.float32)
+    scores, indices = index.search(query_vector, k)
 
     print("="*80)
     print(f"PREGUNTA: '{pregunta}'")
     print("="*80)
 
-    for i, (doc, score) in enumerate(resultados, 1):
-        print(f"\n--- Resultado #{i} (Score Distancia L2: {score:.4f}) ---")
-        print(f"Archivo: {doc.metadata.get('fuente', 'Desconocido')}")
-        
-        headers = [f"{k}: {v}" for k, v in doc.metadata.items() if k.startswith("Header")]
-        if headers:
-            print(f"Jerarquía: {' -> '.join(headers)}")
-            
-        print(f"\nCONTENIDO:\n{doc.page_content.strip()}")
+    for i, (score, idx) in enumerate(zip(scores[0], indices[0]), 1):
+        if idx < 0 or idx >= len(metadatos):
+            continue
+        meta = metadatos[idx]
+        print(f"\n--- Resultado #{i} (Score Similitud IP: {score:.4f}) ---")
+        print(f"Archivo: {meta.get('fuente', 'Desconocido')}")
+        print(f"Doc ID : {meta.get('doc_id', 'Desconocido')}")
+        print(f"Chunk  : {meta.get('chunk_id', 'Desconocido')}")
+        print(f"Formato: {meta.get('formato', 'Desconocido')}")
+        print(f"\nCONTENIDO:\n{meta.get('texto', '').strip()}")
         print("-" * 80)
 
 if __name__ == "__main__":
