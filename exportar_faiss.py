@@ -3,6 +3,9 @@
 
 Soporta exportación a formatos JSON, JSONL, CSV y Markdown, además de resumen
 estadístico y búsqueda vectorial desde CLI.
+
+Lee la metadata desde ``metadata.jsonl`` (formato CODEFEST AD ASTRA 2026)
+y el índice puro desde ``index.faiss`` (serializado con ``faiss.write_index``).
 """
 
 from __future__ import annotations
@@ -11,65 +14,61 @@ import argparse
 import csv
 import json
 import os
-import pickle
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Rutas por defecto
-FAISS_DIR_DEFAULT = Path(__file__).parent / "faiss_index"
+FAISS_DIR_DEFAULT = Path(__file__).parent / "base_vectorial" / "encoder_multilingual-e5-large-instruct"
 OUTPUT_DIR_DEFAULT = Path(__file__).parent / "salida"
 
 
 def cargar_datos_faiss(faiss_dir: Path | str = FAISS_DIR_DEFAULT) -> List[Dict[str, Any]]:
-    """Lee el archivo index.pkl de FAISS y devuelve la lista estructurada de chunks.
+    """Lee metadata.jsonl del directorio del encoder y devuelve la lista estructurada de chunks.
 
     Args:
-        faiss_dir: Directorio donde se encuentran index.pkl e index.faiss.
+        faiss_dir: Directorio donde se encuentran metadata.jsonl e index.faiss.
 
     Returns:
-        Lista de diccionarios con id_faiss, doc_id, chunk_id, texto, num_tokens y metadatos completos.
+        Lista de diccionarios con faiss_id, doc_id, chunk_id, texto, num_tokens y metadatos completos.
     """
     faiss_dir = Path(faiss_dir)
-    pkl_path = faiss_dir / "index.pkl"
+    metadata_path = faiss_dir / "metadata.jsonl"
 
-    if not pkl_path.exists():
-        raise FileNotFoundError(f"No se encontró el archivo de metadatos en: {pkl_path}")
-
-    with open(pkl_path, "rb") as f:
-        docstore, index_to_docstore_id = pickle.load(f)
-
-    # Invertir o mapear index_to_docstore_id
-    id_map = {docstore_id: faiss_id for faiss_id, docstore_id in index_to_docstore_id.items()}
+    if not metadata_path.exists():
+        raise FileNotFoundError(f"No se encontró el archivo de metadatos en: {metadata_path}")
 
     fragmentos = []
-    for docstore_id, doc in docstore._dict.items():
-        faiss_id = id_map.get(docstore_id, -1)
-        meta = dict(doc.metadata) if hasattr(doc, "metadata") and doc.metadata else {}
+    with open(metadata_path, "r", encoding="utf-8") as f:
+        for faiss_id, line in enumerate(f):
+            line = line.strip()
+            if not line:
+                continue
+            meta = json.loads(line)
 
-        # Normalizar campos clave para análisis estandarizado
-        doc_id = meta.get("doc_id") or meta.get("documento") or meta.get("fuente") or "desconocido"
-        formato = meta.get("formato") or meta.get("tipo") or meta.get("extension") or "desconocido"
-        fuente = meta.get("fuente") or meta.get("ruta") or meta.get("documento") or ""
-        posicion = meta.get("posicion") or meta.get("fragmento") or 0
-        num_tokens = meta.get("num_tokens") or meta.get("tokens") or len(doc.page_content.split())
-        fenomeno = meta.get("fenomeno")
-        chunk_id = meta.get("chunk_id") or f"{doc_id}-chunk-{posicion:03d}"
+            # Normalizar campos clave para análisis estandarizado
+            doc_id = meta.get("doc_id") or meta.get("documento") or meta.get("fuente") or "desconocido"
+            formato = meta.get("formato") or meta.get("tipo") or meta.get("extension") or "desconocido"
+            fuente = meta.get("fuente") or meta.get("ruta") or meta.get("documento") or ""
+            posicion = meta.get("posicion") or meta.get("fragmento") or 0
+            num_tokens = meta.get("num_tokens") or meta.get("tokens") or 0
+            fenomeno = meta.get("fenomeno")
+            chunk_id = meta.get("chunk_id") or f"{doc_id}-chunk-{posicion:03d}"
+            texto = meta.get("texto", "")
 
-        item = {
-            "faiss_id": faiss_id,
-            "docstore_id": str(docstore_id),
-            "doc_id": doc_id,
-            "chunk_id": chunk_id,
-            "fuente": fuente,
-            "formato": formato,
-            "fenomeno": fenomeno,
-            "posicion": posicion,
-            "num_tokens": num_tokens,
-            "texto": doc.page_content,
-            "metadata": meta,
-        }
-        fragmentos.append(item)
+            item = {
+                "faiss_id": faiss_id,
+                "doc_id": doc_id,
+                "chunk_id": chunk_id,
+                "fuente": fuente,
+                "formato": formato,
+                "fenomeno": fenomeno,
+                "posicion": posicion,
+                "num_tokens": num_tokens,
+                "texto": texto,
+                "metadata": meta,
+            }
+            fragmentos.append(item)
 
     # Ordenar por documento y posicion/faiss_id
     fragmentos.sort(key=lambda x: (x["doc_id"], x["posicion"], x["faiss_id"]))
@@ -161,7 +160,7 @@ def exportar_markdown(fragmentos: List[Dict[str, Any]], resumen: Dict[str, Any],
 
     lines = []
     lines.append("# Reporte y Resumen de Datos de Índice FAISS")
-    lines.append(f"\n> **Índice analizado:** `faiss_index/`  ")
+    lines.append(f"\n> **Índice analizado:** `base_vectorial/`  ")
     lines.append(f"> **Total de Chunks:** {resumen['total_chunks']}  ")
     lines.append(f"> **Total de Documentos:** {resumen['total_documentos']}  ")
     lines.append(f"> **Tokens Totales:** {resumen['tokens_totales']:,} (Promedio: {resumen['promedio_tokens_por_chunk']} t/chunk)\n")
@@ -206,32 +205,58 @@ def exportar_markdown(fragmentos: List[Dict[str, Any]], resumen: Dict[str, Any],
 def ejecutar_busqueda_cli(faiss_dir: Path, query: str, top_k: int = 5) -> None:
     """Ejecuta una búsqueda vectorial de prueba directamente desde la línea de comandos."""
     try:
-        from langchain_community.vectorstores import FAISS
+        import faiss
+        import numpy as np
         from langchain_huggingface import HuggingFaceEmbeddings
 
+        faiss_dir = Path(faiss_dir)
+        index_path = faiss_dir / "index.faiss"
+        metadata_path = faiss_dir / "metadata.jsonl"
+
+        if not index_path.exists():
+            print(f"❌ No se encontró el índice en: {index_path}")
+            return
+
         print(f"\n🔍 Buscando en FAISS: '{query}' (top_k={top_k})...\n")
+
+        # Cargar índice FAISS nativo
+        index = faiss.read_index(str(index_path))
+
+        # Cargar metadata
+        metadatos = []
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    metadatos.append(json.loads(line))
+
+        # Generar embedding de la query
         embeddings = HuggingFaceEmbeddings(
             model_name="intfloat/multilingual-e5-large-instruct",
             model_kwargs={"device": "cpu"},
             encode_kwargs={"normalize_embeddings": True},
         )
-        vectorstore = FAISS.load_local(str(faiss_dir), embeddings, allow_dangerous_deserialization=True)
-        results = vectorstore.similarity_search_with_score(query, k=top_k)
+        query_vector = np.array([embeddings.embed_query(query)], dtype=np.float32)
 
-        for rank, (doc, score) in enumerate(results, 1):
-            meta = doc.metadata
-            print(f"--- [Rank {rank}] Score / Distancia: {score:.4f} ---")
-            print(f"Doc ID  : {meta.get('doc_id') or meta.get('documento')}")
-            print(f"Chunk ID: {meta.get('chunk_id') or meta.get('fragmento')}")
-            print(f"Formato : {meta.get('formato') or meta.get('tipo')}")
-            print(f"Texto   : {doc.page_content[:250]}...\n")
+        # Buscar en FAISS
+        scores, indices = index.search(query_vector, top_k)
+
+        for rank, (score, idx) in enumerate(zip(scores[0], indices[0]), 1):
+            if idx < 0 or idx >= len(metadatos):
+                continue
+            meta = metadatos[idx]
+            print(f"--- [Rank {rank}] Score / Similitud: {score:.4f} ---")
+            print(f"Doc ID  : {meta.get('doc_id')}")
+            print(f"Chunk ID: {meta.get('chunk_id')}")
+            print(f"Formato : {meta.get('formato')}")
+            print(f"Texto   : {meta.get('texto', '')[:250]}...\n")
     except Exception as e:
         print(f"❌ Error al ejecutar búsqueda vectorial: {e}")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Extrae, analiza y exporta datos almacenados en faiss_index")
-    parser.add_argument("--faiss-dir", type=str, default=str(FAISS_DIR_DEFAULT), help="Ruta al directorio faiss_index")
+    parser = argparse.ArgumentParser(description="Extrae, analiza y exporta datos almacenados en base_vectorial")
+    parser.add_argument("--faiss-dir", type=str, default=str(FAISS_DIR_DEFAULT), help="Ruta al directorio del encoder (con index.faiss y metadata.jsonl)")
     parser.add_argument("--out-dir", type=str, default=str(OUTPUT_DIR_DEFAULT), help="Ruta del directorio de salida")
     parser.add_argument("--format", type=str, choices=["all", "json", "jsonl", "csv", "md"], default="all", help="Formato de exportación")
     parser.add_argument("--stats", action="store_true", help="Mostrar resumen estadístico en terminal")
