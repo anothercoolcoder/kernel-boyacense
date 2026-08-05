@@ -37,22 +37,25 @@ from typing import Any, Dict, Iterable, List, Sequence
 __all__ = [
     "Fragmento",
     "MAX_TOKENS",
+    "MAX_WORDS",
     "MODELO_TOKENIZADOR",
     "detectar_idioma",
     "inferir_fenomeno",
     "fragmentar",
     "fragmentar_registros",
     "contar_tokens",
+    "contar_palabras",
 ]
 
 logger = logging.getLogger(__name__)
 
 Fragmento = Dict[str, Any]
 
-#: Tokens útiles por fragmento. El modelo e5-large-instruct añade un prefix de
-#: instrucción al embeber (~10 tokens); 500 + 12 especiales caben en la ventana
-#: de 512 sin truncamiento silencioso.
+#: Presupuesto conservador para dejar margen a tokens especiales del encoder.
+#: El límite adicional de palabras facilita cumplir posteriormente el máximo de
+#: 250 palabras del entregable sin tener que cortar oraciones en recuperación.
 MAX_TOKENS = 500
+MAX_WORDS = 220
 
 #: Tokenizador por defecto. DEBE ser el del modelo de embeddings que se use
 #: en la etapa 3; contar con otro tokenizador da un presupuesto equivocado.
@@ -76,6 +79,8 @@ _MARCAS_IDIOMA = {
 }
 
 _PALABRAS = re.compile(r"[^\W\d_]+", re.UNICODE)
+_ENCABEZADO = re.compile(r"^\s{0,3}(#{1,6})\s+(.+?)\s*$")
+_LISTA_O_TABLA = re.compile(r"^\s*(?:[-*+]\s+|\|)")
 
 
 # --------------------------------------------------------------------------- #
@@ -134,11 +139,7 @@ def detectar_idioma(texto: str) -> str:
 
 
 def _oraciones(texto: str, idioma: str | None = None) -> List[str]:
-    """Parte el texto en oraciones con NLTK (Punkt), descargando el modelo si falta.
-
-    Punkt entiende que "Fig. 1" o "et al." no terminan una oración, que es
-    justo donde un ``split('.')`` destroza el texto académico.
-    """
+    """Parte un bloque en oraciones completas con NLTK Punkt."""
     import nltk
 
     idioma = idioma or detectar_idioma(texto)
@@ -150,28 +151,95 @@ def _oraciones(texto: str, idioma: str | None = None) -> List[str]:
         return nltk.sent_tokenize(texto, language=idioma)
 
 
-def _trozos_duros(oracion: str, limite: int, tokenizador: Any) -> List[str]:
-    """Parte por tokens una oración que por sí sola excede el límite.
+def contar_palabras(texto: str) -> int:
+    """Cuenta palabras lingüísticas, ignorando puntuación y números aislados."""
+    return len(_PALABRAS.findall(texto))
 
-    Caso real: tablas serializadas y bloques de código, que no tienen puntos
-    donde cortar. Aquí sí se corta a mitad de frase porque no hay alternativa:
-    dejarla pasar entera haría que el modelo truncara el resto en silencio.
-    """
-    ids = tokenizador.encode(oracion, add_special_tokens=False)
-    trozos: List[str] = []
-    inicio = 0
-    while inicio < len(ids):
-        fin = min(inicio + limite, len(ids))
-        trozo = tokenizador.decode(ids[inicio:fin], skip_special_tokens=True).strip()
-        # decode->encode no es idempotente (SentencePiece reañade prefijos ▁), así
-        # que el trozo puede volver a medir más del límite: se recorta hasta caber.
-        while fin > inicio + 1 and contar_tokens(trozo, tokenizador) > limite:
-            fin -= 1
-            trozo = tokenizador.decode(ids[inicio:fin], skip_special_tokens=True).strip()
-        if trozo:
-            trozos.append(trozo)
-        inicio = fin
-    return trozos
+
+def _secciones(texto: str) -> List[tuple[str, str, int]]:
+    """Devuelve bloques estructurales ``(cuerpo, título, nivel)``."""
+    secciones: List[tuple[str, str, int]] = []
+    cuerpo: List[str] = []
+    titulo = ""
+    nivel = 0
+
+    def cerrar() -> None:
+        nonlocal cuerpo, titulo, nivel
+        contenido = "\n".join(cuerpo).strip()
+        if contenido or titulo:
+            secciones.append((contenido, titulo, nivel))
+        cuerpo = []
+
+    for linea in texto.splitlines():
+        match = _ENCABEZADO.match(linea)
+        if match:
+            cerrar()
+            titulo = match.group(2).strip()
+            nivel = len(match.group(1))
+        else:
+            cuerpo.append(linea)
+    cerrar()
+    return secciones or [(texto.strip(), "", 0)]
+
+
+def _unidades_seccion(cuerpo: str, titulo: str, nivel: int, idioma: str) -> List[tuple[str, str, int]]:
+    """Convierte una sección en unidades oracionales sin cortes artificiales."""
+    if not cuerpo.strip():
+        return [(titulo, titulo, nivel)] if titulo else []
+
+    unidades: List[tuple[str, str, int]] = []
+    bloques = [bloque.strip() for bloque in re.split(r"\n\s*\n", cuerpo) if bloque.strip()]
+    for bloque in bloques:
+        lineas = bloque.splitlines()
+        terminales = sum(bool(re.search(r"[.!?;:]\s*$", linea.strip())) for linea in lineas)
+        cortas = sum(len(linea.strip()) <= 80 for linea in lineas)
+        numericas = sum(bool(re.search(r"\d", linea)) for linea in lineas)
+        total_caracteres = max(1, sum(len(linea) for linea in lineas))
+        digitos = sum(caracter.isdigit() for linea in lineas for caracter in linea)
+        tiene_cabecera_tabla = bool(
+            re.search(r"\b(?:cuadro|tabla|table|figure|figura)\s+\d+\b", " ".join(lineas), re.IGNORECASE)
+        )
+        bloque_denso = (
+            len(lineas) >= 4
+            and (
+                tiene_cabecera_tabla
+                or (
+                    terminales / len(lineas) < 0.5
+                    and (
+                        cortas / len(lineas) >= 0.6
+                        or numericas / len(lineas) >= 0.4
+                        or digitos / total_caracteres >= 0.08
+                    )
+                )
+            )
+        )
+        if bloque_denso:
+            # Las tablas extraídas de PDF suelen perder delimitadores y llegar
+            # como filas cortas sin puntuación. Cada línea es aquí la unidad
+            # atómica; se empaquetan varias filas, pero nunca se parten.
+            unidades.extend(
+                (linea.strip(), titulo, nivel)
+                for linea in lineas
+                if linea.strip()
+            )
+            continue
+
+        partes: List[str] = []
+        for linea in lineas:
+            if len(lineas) > 1 and _LISTA_O_TABLA.match(linea):
+                if partes:
+                    unidades.extend((u.strip(), titulo, nivel) for u in _oraciones(" ".join(partes), idioma) if u.strip())
+                    partes = []
+                unidades.extend((u.strip(), titulo, nivel) for u in _oraciones(linea, idioma) if u.strip())
+            else:
+                partes.append(linea)
+        if partes:
+            unidades.extend((u.strip(), titulo, nivel) for u in _oraciones("\n".join(partes), idioma) if u.strip())
+
+    if titulo and unidades:
+        primera, _, _ = unidades[0]
+        unidades[0] = (f"{titulo}: {primera}", titulo, nivel)
+    return unidades
 
 
 # --------------------------------------------------------------------------- #
@@ -182,33 +250,114 @@ def _empacar(
     costos: Sequence[int],
     limite: int,
     solape: int,
+    costos_palabras: Sequence[int] | None = None,
+    limite_palabras: int | None = None,
 ) -> List[List[int]]:
-    """Agrupa índices de oración en fragmentos que no superen ``limite`` tokens.
+    """Agrupa unidades sin superar los límites de tokens y palabras.
 
-    Suma el costo por oración en vez de re-tokenizar el fragmento en cada paso
-    (que sería cuadrático). La suma sobreestima ligeramente el total real
-    —cada oración paga sus tokens de borde—, así que el presupuesto queda del
-    lado seguro: nunca produce un fragmento que el modelo tenga que truncar.
+    Las unidades se tratan como atómicas: nunca se dividen por tokens. Una
+    oración o fila individual que exceda el presupuesto se conserva completa y
+    queda marcada como ``oversize`` por la etapa superior.
     """
     grupos: List[List[int]] = []
     actual: List[int] = []
-    total = 0
+    total_tokens = 0
+    total_palabras = 0
+    costos_palabras = costos_palabras or [0] * len(costos)
 
     for indice, costo in enumerate(costos):
-        if actual and total + costo > limite:
+        palabras = costos_palabras[indice]
+        excede_tokens = bool(actual and total_tokens + costo > limite)
+        excede_palabras = bool(
+            actual and limite_palabras is not None
+            and total_palabras + palabras > limite_palabras
+        )
+        if excede_tokens or excede_palabras:
             grupos.append(actual)
             actual = actual[-solape:] if solape else []
-            total = sum(costos[i] for i in actual)
-            if total + costo > limite:
-                # el solape no deja sitio para la oración: el contexto extra se
-                # sacrifica antes que desbordar el presupuesto del modelo.
-                actual, total = [], 0
+            total_tokens = sum(costos[i] for i in actual)
+            total_palabras = sum(costos_palabras[i] for i in actual)
+            if (
+                total_tokens + costo > limite
+                or (limite_palabras is not None and total_palabras + palabras > limite_palabras)
+            ):
+                actual = []
+                total_tokens = total_palabras = 0
         actual.append(indice)
-        total += costo
+        total_tokens += costo
+        total_palabras += palabras
 
     if actual:
         grupos.append(actual)
     return grupos
+
+
+def _ajustar_grupo(
+    textos: Sequence[str],
+    grupo: Sequence[int],
+    limite_tokens: int,
+    limite_palabras: int,
+    tokenizador: Any,
+) -> List[List[int]]:
+    """Revalida grupos con el texto concatenado, no solo costes individuales."""
+    salida: List[List[int]] = []
+    actual: List[int] = []
+    for indice in grupo:
+        candidato = actual + [indice]
+        texto = " ".join(textos[i] for i in candidato).strip()
+        excede = (
+            contar_tokens(texto, tokenizador) > limite_tokens
+            or contar_palabras(texto) > limite_palabras
+        )
+        if actual and excede:
+            salida.append(actual)
+            actual = [indice]
+        else:
+            actual = candidato
+    if actual:
+        salida.append(actual)
+    return salida
+
+
+def _fragmentar_detallado(
+    texto: str,
+    max_tokens: int,
+    max_words: int,
+    solape: int,
+    tokenizador: Any,
+    idioma: str | None,
+) -> List[tuple[str, int, int, str, int, bool]]:
+    """Fragmenta y devuelve trazabilidad estructural y de tamaño."""
+    idioma = idioma or detectar_idioma(texto)
+    unidades: List[tuple[str, str, int]] = []
+    for cuerpo, titulo, nivel in _secciones(texto):
+        unidades.extend(_unidades_seccion(cuerpo, titulo, nivel, idioma))
+
+    salida: List[tuple[str, int, int, str, int, bool]] = []
+    cursor = 0
+    while cursor < len(unidades):
+        titulo = unidades[cursor][1]
+        nivel = unidades[cursor][2]
+        fin = cursor
+        while fin < len(unidades) and unidades[fin][1] == titulo and unidades[fin][2] == nivel:
+            fin += 1
+
+        bloque = unidades[cursor:fin]
+        textos = [unidad[0] for unidad in bloque]
+        costos = [contar_tokens(unidad, tokenizador) for unidad in textos]
+        palabras = [contar_palabras(unidad) for unidad in textos]
+        grupos = _empacar(textos, costos, max_tokens, solape, palabras, max_words)
+        for grupo in grupos:
+            for subgrupo in _ajustar_grupo(textos, grupo, max_tokens, max_words, tokenizador):
+                fragmento = " ".join(textos[i] for i in subgrupo).strip()
+                if not fragmento:
+                    continue
+                num_tokens = contar_tokens(fragmento, tokenizador)
+                num_palabras = contar_palabras(fragmento)
+                oversize = num_tokens > max_tokens or num_palabras > max_words
+                salida.append((fragmento, num_tokens, num_palabras, titulo, nivel, oversize))
+        cursor = fin
+    return salida
 
 
 def fragmentar(
@@ -217,43 +366,16 @@ def fragmentar(
     solape: int = SOLAPE_ORACIONES,
     tokenizador: Any = None,
     idioma: str | None = None,
+    max_words: int = MAX_WORDS,
 ) -> List[tuple[str, int]]:
-    """Parte un texto en fragmentos de ``<= max_tokens``, cortando por oración.
-
-    Args:
-        texto: texto a fragmentar.
-        max_tokens: presupuesto de tokens de contenido por fragmento.
-        solape: oraciones repetidas entre fragmentos consecutivos.
-        tokenizador: tokenizador de HuggingFace; por defecto el de
-            :data:`MODELO_TOKENIZADOR`.
-        idioma: idioma Punkt; por defecto se detecta con
-            :func:`detectar_idioma`.
-
-    Returns:
-        Lista de ``(texto_fragmento, tokens)`` en orden de lectura.
-    """
+    """Parte texto en unidades completas con límites de tokens y palabras."""
     tok = tokenizador or _tokenizador()
-
-    oraciones: List[str] = []
-    for oracion in _oraciones(texto, idioma):
-        oracion = oracion.strip()
-        if not oracion:
-            continue
-        if contar_tokens(oracion, tok) > max_tokens:
-            oraciones.extend(_trozos_duros(oracion, max_tokens, tok))
-        else:
-            oraciones.append(oracion)
-
-    if not oraciones:
-        return []
-
-    costos = [contar_tokens(o, tok) for o in oraciones]
-    salida: List[tuple[str, int]] = []
-    for grupo in _empacar(oraciones, costos, max_tokens, solape):
-        fragmento = " ".join(oraciones[i] for i in grupo).strip()
-        if fragmento:
-            salida.append((fragmento, contar_tokens(fragmento, tok)))
-    return salida
+    return [
+        (fragmento, tokens)
+        for fragmento, tokens, _, _, _, _ in _fragmentar_detallado(
+            texto, max_tokens, max_words, solape, tok, idioma
+        )
+    ]
 
 
 KEYWORDS_FENOMENO: Dict[int, List[str]] = {
@@ -298,6 +420,7 @@ def fragmentar_registros(
     max_tokens: int = MAX_TOKENS,
     solape: int = SOLAPE_ORACIONES,
     tokenizador: Any = None,
+    max_words: int = MAX_WORDS,
 ) -> List[Fragmento]:
     """Aplica :func:`fragmentar` a los registros de :mod:`extraccion`.
 
@@ -349,11 +472,13 @@ def fragmentar_registros(
             fenomeno = inferir_fenomeno(fuente or ruta_str, registro.get("texto", ""))
 
         idioma = detectar_idioma(registro["texto"])
-        trozos = fragmentar(registro["texto"], max_tokens, solape, tok, idioma)
+        trozos = _fragmentar_detallado(
+            registro["texto"], max_tokens, max_words, solape, tok, idioma
+        )
 
         # 1.1: Contador continuo de posicion y chunk_id por doc_id
         pos_inicio = posiciones_por_doc.get(doc_id, 0)
-        for i, (texto, tokens) in enumerate(trozos):
+        for i, (texto, tokens, palabras, seccion, nivel_seccion, oversize) in enumerate(trozos):
             posicion = pos_inicio + i
             fragmentos.append(
                 {
@@ -371,6 +496,10 @@ def fragmentar_registros(
                         "idioma": idioma,
                         "pagina": registro.get("pagina"),
                         "fragmentos_pagina": len(trozos),
+                        "seccion": seccion or None,
+                        "nivel_seccion": nivel_seccion or None,
+                        "num_palabras": palabras,
+                        "oversize": oversize,
                     },
                 }
             )
@@ -426,8 +555,10 @@ def _autoprueba() -> None:
     assert all(t <= 100 for _, t in trozos), [t for _, t in trozos]
     assert "Fig. 1 muestra el caso." in trozos[0][0], "Punkt no debe cortar en 'Fig.'"
 
-    largo = "palabra " * 2000
-    assert all(t <= 50 for _, t in fragmentar(largo, max_tokens=50, tokenizador=tok))
+    largo = "Primera oración completa. " + "Segunda oración completa. " * 200
+    largos = fragmentar(largo, max_tokens=50, max_words=40, tokenizador=tok)
+    assert len(largos) > 1
+    assert all("oración" in texto for texto, _ in largos)
 
     registro = {
         "doc_id": "DOC-0001", "documento": "d.pdf", "ruta": "/d.pdf", "tipo": "pdf", "pagina": 3,
