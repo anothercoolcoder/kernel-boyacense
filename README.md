@@ -112,7 +112,7 @@ Una vez iniciado, abre tu navegador en **`http://localhost:8501`**.
 
 ## Herramienta CLI de Parsing y Exportación (`exportar_faiss.py`)
 
-Permite parsear el archivo `faiss_index/index.pkl` a varios formatos legibles desde la terminal o scripts automatizados.
+Permite parsear el archivo `metadata.jsonl` de la base vectorial a varios formatos legibles desde la terminal o scripts automatizados.
 
 ### Comandos CLI Principales
 
@@ -127,7 +127,7 @@ python exportar_faiss.py --format csv
 python exportar_faiss.py --search "Inteligencia artificial militar" --top-k 5
 
 # Especificar rutas personalizadas de índice y salida:
-python exportar_faiss.py --faiss-dir ./faiss_index --out-dir ./salida
+python exportar_faiss.py --faiss-dir ./base_vectorial/encoder_multilingual-e5-large-instruct --out-dir ./salida
 ```
 
 Los archivos generados se guardan automáticamente en la carpeta `salida/`:
@@ -153,7 +153,7 @@ python test_pipeline.py corpus_adl/data/documento.pdf
 ```
 
 ### 2. Prueba de Recuperación e Índice Vectorial FAISS (`test/test_rag.py`)
-Verifica la carga del índice vectorial `faiss_index/` y realiza consultas de prueba mediante similitud coseno con `multilingual-e5-large-instruct`:
+Verifica la carga del índice vectorial `base_vectorial/` y realiza consultas de prueba mediante similitud coseno con `multilingual-e5-large-instruct`:
 ```bash
 python test/test_rag.py
 ```
@@ -173,7 +173,10 @@ kernel-boyacense/
 ├── context/               # Documentación técnica de referencia y reportes de diagnóstico
 ├── corpus_adl/            # Corpus de archivos de entrada (PDF, HTML, MD, CSV, imágenes, PBF)
 ├── extraccion/            # Módulo de extracción multimodal y fragmentación semántica
-├── faiss_index/           # Índice vectorial FAISS persistido (index.faiss y index.pkl)
+├── base_vectorial/            # Índice FAISS + metadata.jsonl por encoder
+│   └── encoder_multilingual-e5-large-instruct/
+│       ├── index.faiss        # Índice FAISS puro (faiss.write_index)
+│       └── metadata.jsonl     # Metadata por fragmento (JSON Lines)
 ├── indexar/               # Módulo de creación e indexación vectorial con HuggingFace Embeddings
 ├── salida/                # Archivos exportados (JSON, JSONL, CSV, Markdown)
 ├── test/                  # Pruebas de recuperación semántica e integración RAG
