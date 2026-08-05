@@ -78,6 +78,16 @@ def _preparar_textos(fragmentos: List[dict]) -> tuple[List[str], List[dict]]:
             "num_tokens": frag.get("num_tokens", 0),
             "texto":      frag["texto"],
         }
+        # Conservar trazabilidad de extracción y chunking. Los valores de
+        # ``_meta`` son JSON-native y se mantienen fuera de los campos
+        # obligatorios para no romper el contrato del reto.
+        meta.update(
+            {
+                clave: valor
+                for clave, valor in frag.get("_meta", {}).items()
+                if clave not in meta
+            }
+        )
         metadatos.append(meta)
 
     return textos, metadatos
