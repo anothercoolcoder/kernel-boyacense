@@ -29,9 +29,12 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
+import re
 import threading
 import unicodedata
+from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Sequence
 
@@ -177,6 +180,22 @@ UMBRAL_OCR = 0.35
 #: el formato de una tabla, y el plano nunca pierde contenido.
 UMBRAL_RETENCION_MD = 0.95
 
+# Marcadores que pymupdf4llm puede dejar alrededor del texto OCR de figuras.
+# Solo se eliminan comentarios conocidos; no se borra HTML arbitrario de
+# Markdown porque puede formar parte del contenido original.
+_MARCADORES_FIGURA = re.compile(
+    r"<!--\s*(?:start|end)\s+of\s+(?:picture|image)\s+text\s*-->"
+    r"|<!--\s*(?:start|end)\s+of\s+(?:picture|image)\s*-->",
+    re.IGNORECASE,
+)
+_BR_PDF = re.compile(r"</?(?:br|sup|sub|u)\s*/?>", re.IGNORECASE)
+_CONTROL_NO_PERMITIDO = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+_ESPACIOS_LINEA = re.compile(r"[ \t]+")
+_NUMERO_PAGINA = re.compile(
+    r"^(?:p(?:age|á?gina)?\s*)?[-–—]?\s*\d+\s*[-–—]?$",
+    re.IGNORECASE,
+)
+
 
 def registrar_extractor(*extensiones: str) -> Callable[[Extractor], Extractor]:
     """Registra una función como extractor de las extensiones dadas.
@@ -282,6 +301,7 @@ def _registro(
     cuántas veces se ejecute el pipeline (regla de negocio de ID fijo).
     """
     formato_norm = _normalizar_formato(tipo, ruta)
+    texto = _limpiar_texto(texto, formato_norm == "pdf")
     return {
         "doc_id": obtener_doc_id(ruta),
         "documento": ruta.name,
@@ -292,6 +312,77 @@ def _registro(
         "texto": texto,
         "metadata": {**_metadata_base(ruta), **(metadata or {})},
     }
+
+
+def _limpiar_texto(texto: str, pdf: bool = False) -> str:
+    """Limpia ruido común conservando saltos, Markdown, listas y tablas."""
+    texto = unicodedata.normalize("NFC", str(texto)).replace("\r\n", "\n").replace("\r", "\n")
+    texto = _MARCADORES_FIGURA.sub("", texto)
+    if pdf:
+        texto = _BR_PDF.sub("", texto)
+    texto = _CONTROL_NO_PERMITIDO.sub("", texto)
+
+    lineas = [_ESPACIOS_LINEA.sub(" ", linea).strip() for linea in texto.split("\n")]
+    if pdf:
+        # Algunas figuras rasterizadas llegan como una única línea enorme de
+        # números sin puntuación. Es ruido gráfico, no una oración ni una fila
+        # recuperable; se elimina solo con las tres señales simultáneas.
+        lineas = [
+            linea for linea in lineas
+            if not (
+                len(linea) > 1000
+                and not re.search(r"[.!?]\s*$", linea)
+                and sum(c.isdigit() for c in linea) / max(1, len(linea)) > 0.08
+            )
+        ]
+    salida: List[str] = []
+    ultimo_vacio = False
+    for linea in lineas:
+        if not linea:
+            if not ultimo_vacio:
+                salida.append("")
+            ultimo_vacio = True
+            continue
+        salida.append(linea)
+        ultimo_vacio = False
+    return "\n".join(salida).strip()
+
+
+def _limpiar_boilerplate_pdf(registros: List[Registro]) -> List[Registro]:
+    """Elimina cabeceras/pies repetidos solo en los márgenes de las páginas."""
+    if len(registros) < 2:
+        return registros
+
+    candidatos: List[str] = []
+    for registro in registros:
+        lineas = [linea.strip() for linea in registro["texto"].splitlines() if linea.strip()]
+        margen = lineas[:6] + lineas[-6:]
+        candidatos.extend(
+            linea for linea in margen
+            if len(linea) >= 3 and not _NUMERO_PAGINA.fullmatch(linea)
+        )
+
+    minimo = max(2, math.ceil(len(registros) * 0.5))
+    repetidos = {
+        linea for linea, cuenta in Counter(candidatos).items()
+        if cuenta >= minimo
+    }
+
+    for registro in registros:
+        lineas = registro["texto"].splitlines()
+        no_vacias = [i for i, linea in enumerate(lineas) if linea.strip()]
+        indices_margen = set(no_vacias[:6] + no_vacias[-6:])
+        filtradas = [
+            linea for i, linea in enumerate(lineas)
+            if not (
+                i in indices_margen
+                and (linea.strip() in repetidos or _NUMERO_PAGINA.fullmatch(linea.strip() or ""))
+            )
+        ]
+        eliminadas = len(lineas) - len(filtradas)
+        registro["texto"] = _limpiar_texto("\n".join(filtradas), pdf=True)
+        registro["metadata"]["boilerplate_lineas_eliminadas"] = eliminadas
+    return _utiles(registros)
 
 
 def _utiles(registros: Iterable[Registro]) -> List[Registro]:
@@ -458,8 +549,9 @@ def extraer_pdf(ruta: Path) -> List[Registro]:
             metadata.update(origen_texto="ocr", confianza=round(confianza, 4))
         registros.append(_registro(ruta, "pdf", indice, texto, metadata))
 
-    logger.info("PDF %s: %d páginas con texto", ruta.name, len(_utiles(registros)))
-    return _utiles(registros)
+    registros = _limpiar_boilerplate_pdf(registros)
+    logger.info("PDF %s: %d páginas con texto", ruta.name, len(registros))
+    return registros
 
 
 _SIN_MARCADO = str.maketrans("", "", "*_#`|")
