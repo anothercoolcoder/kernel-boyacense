@@ -30,7 +30,7 @@ logger = logging.getLogger("main")
 # ── Rutas base ─────────────────────────────────────────────────────────────── #
 BASE_DIR   = Path(__file__).parent
 CORPUS_ADL = BASE_DIR / "corpus_adl"
-FAISS_DIR  = str(BASE_DIR / "faiss_index")
+FAISS_DIR  = str(BASE_DIR / "base_vectorial" / "encoder_multilingual-e5-large-instruct")
 
 #: Mapeo de nombre de carpeta → número de fenómeno.
 #: El pipeline infiere el fenómeno del primer ancestro del archivo que coincida.
