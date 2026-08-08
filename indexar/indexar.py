@@ -66,7 +66,21 @@ def _preparar_textos(fragmentos: List[dict]) -> tuple[List[str], List[dict]]:
     metadatos: List[dict] = []
 
     for frag in fragmentos:
-        textos.append(frag["texto"])
+        texto_raw = frag["texto"]
+        num_tokens = frag.get("num_tokens", 0)
+
+        # 1. Filtro de tokens mínimos
+        if num_tokens < 20:
+            continue
+
+        # 2. Filtro de texto basura (ruido gráfico OCR o tablas de código/números pegados)
+        tokens_texto = texto_raw.split()
+        if tokens_texto:
+            palabras_muy_largas = sum(1 for t in tokens_texto if len(t) > 25)
+            if palabras_muy_largas / len(tokens_texto) > 0.35:
+                continue
+
+        textos.append(f"passage: {texto_raw}")
 
         meta = {
             "doc_id":     frag.get("doc_id", ""),
@@ -75,12 +89,9 @@ def _preparar_textos(fragmentos: List[dict]) -> tuple[List[str], List[dict]]:
             "formato":    frag.get("formato", ""),
             "fenomeno":   frag.get("fenomeno"),
             "posicion":   frag.get("posicion", 0),
-            "num_tokens": frag.get("num_tokens", 0),
-            "texto":      frag["texto"],
+            "num_tokens": num_tokens,
+            "texto":      texto_raw,
         }
-        # Conservar trazabilidad de extracción y chunking. Los valores de
-        # ``_meta`` son JSON-native y se mantienen fuera de los campos
-        # obligatorios para no romper el contrato del reto.
         meta.update(
             {
                 clave: valor
@@ -137,9 +148,14 @@ def indexar(fragmentos: List[dict], faiss_dir: str = BASE_VECTORIAL_DIR) -> None
         },
     )
 
-    # Generar vectores de embeddings
-    vectors = embeddings_model.embed_documents(textos)
-    vectors_np = np.array(vectors, dtype=np.float32)
+    # Generar vectores de embeddings (con barra de progreso en terminal)
+    vectors_np = embeddings_model._client.encode(
+        textos,
+        normalize_embeddings=True,
+        batch_size=32,
+        show_progress_bar=True,
+        convert_to_numpy=True,
+    )
 
     # Crear índice FAISS (Inner Product ≡ coseno con vectores normalizados)
     dimension = vectors_np.shape[1]
@@ -155,5 +171,5 @@ def indexar(fragmentos: List[dict], faiss_dir: str = BASE_VECTORIAL_DIR) -> None
     _escribir_metadata_jsonl(metadatos, out_dir / "metadata.jsonl")
 
     print(f"Indexación FAISS completada. Guardado en: '{faiss_dir}'")
-    print(f"  → index.faiss: {index.ntotal} vectores (dim={dimension})")
-    print(f"  → metadata.jsonl: {len(metadatos)} registros")
+    print(f"  -> index.faiss: {index.ntotal} vectores (dim={dimension})")
+    print(f"  -> metadata.jsonl: {len(metadatos)} registros")

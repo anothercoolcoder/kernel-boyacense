@@ -230,13 +230,14 @@ def ejecutar_busqueda_cli(faiss_dir: Path, query: str, top_k: int = 5) -> None:
                 if line:
                     metadatos.append(json.loads(line))
 
-        # Generar embedding de la query
         embeddings = HuggingFaceEmbeddings(
             model_name="intfloat/multilingual-e5-large-instruct",
             model_kwargs={"device": "cpu"},
             encode_kwargs={"normalize_embeddings": True},
         )
-        query_vector = np.array([embeddings.embed_query(query)], dtype=np.float32)
+        instruccion = "Given a web search query, retrieve relevant passages that answer the query"
+        query_formateada = f"Instruct: {instruccion}\nQuery: {query}"
+        query_vector = np.array([embeddings.embed_query(query_formateada)], dtype=np.float32)
 
         # Buscar en FAISS
         scores, indices = index.search(query_vector, top_k)

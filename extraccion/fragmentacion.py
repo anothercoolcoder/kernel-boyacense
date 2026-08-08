@@ -169,13 +169,20 @@ def _secciones(texto: str) -> List[tuple[str, str, int]]:
         if contenido or titulo:
             secciones.append((contenido, titulo, nivel))
         cuerpo = []
+        titulo = ""
 
     for linea in texto.splitlines():
         match = _ENCABEZADO.match(linea)
         if match:
-            cerrar()
-            titulo = match.group(2).strip()
-            nivel = len(match.group(1))
+            if any(c.strip() for c in cuerpo):
+                cerrar()
+                titulo = match.group(2).strip()
+                nivel = len(match.group(1))
+            else:
+                nuevo = match.group(2).strip()
+                titulo = f"{titulo} - {nuevo}" if titulo else nuevo
+                nivel = len(match.group(1))
+                cuerpo = []  # clear any whitespace-only lines
         else:
             cuerpo.append(linea)
     cerrar()
@@ -185,7 +192,7 @@ def _secciones(texto: str) -> List[tuple[str, str, int]]:
 def _unidades_seccion(cuerpo: str, titulo: str, nivel: int, idioma: str) -> List[tuple[str, str, int]]:
     """Convierte una sección en unidades oracionales sin cortes artificiales."""
     if not cuerpo.strip():
-        return [(titulo, titulo, nivel)] if titulo else []
+        return []
 
     unidades: List[tuple[str, str, int]] = []
     bloques = [bloque.strip() for bloque in re.split(r"\n\s*\n", cuerpo) if bloque.strip()]

@@ -353,20 +353,22 @@ def _limpiar_boilerplate_pdf(registros: List[Registro]) -> List[Registro]:
     if len(registros) < 2:
         return registros
 
+    def _norm(linea: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", "", linea.strip().lower()))
+
     candidatos: List[str] = []
+    candidatos_norm: List[str] = []
     for registro in registros:
         lineas = [linea.strip() for linea in registro["texto"].splitlines() if linea.strip()]
         margen = lineas[:6] + lineas[-6:]
-        candidatos.extend(
-            linea for linea in margen
-            if len(linea) >= 3 and not _NUMERO_PAGINA.fullmatch(linea)
-        )
+        for linea in margen:
+            if len(linea) >= 3 and not _NUMERO_PAGINA.fullmatch(linea):
+                candidatos.append(linea)
+                candidatos_norm.append(_norm(linea))
 
-    minimo = max(2, math.ceil(len(registros) * 0.5))
-    repetidos = {
-        linea for linea, cuenta in Counter(candidatos).items()
-        if cuenta >= minimo
-    }
+    minimo = max(2, math.ceil(len(registros) * 0.35))
+    conteo_norm = Counter(candidatos_norm)
+    repetidos_norm = {linea_norm for linea_norm, cuenta in conteo_norm.items() if cuenta >= minimo}
 
     for registro in registros:
         lineas = registro["texto"].splitlines()
@@ -376,7 +378,7 @@ def _limpiar_boilerplate_pdf(registros: List[Registro]) -> List[Registro]:
             linea for i, linea in enumerate(lineas)
             if not (
                 i in indices_margen
-                and (linea.strip() in repetidos or _NUMERO_PAGINA.fullmatch(linea.strip() or ""))
+                and (_norm(linea) in repetidos_norm or _NUMERO_PAGINA.fullmatch(linea.strip() or ""))
             )
         ]
         eliminadas = len(lineas) - len(filtradas)
@@ -530,23 +532,33 @@ def extraer_pdf(ruta: Path) -> List[Registro]:
             str(ruta), page_chunks=True, ignore_images=True, ignore_graphics=True
         )
     except Exception as exc:
-        raise ErrorExtraccion(f"PDF ilegible {ruta}: {exc}") from exc
+        logger.warning("pymupdf4llm falló en %s, usando pymupdf puro: %s", ruta.name, exc)
+        paginas = []
 
     crudos = _texto_crudo_pdf(ruta)
+    
+    if not paginas and not crudos:
+        raise ErrorExtraccion(f"PDF ilegible {ruta}")
 
     registros: List[Registro] = []
-    for indice, pagina in enumerate(paginas, start=1):
-        texto = str(pagina.get("text", "")).strip()
-        metadata: Dict[str, Any] = {"origen_texto": "nativo", "total_paginas": len(paginas)}
+    num_pages = max(len(paginas), len(crudos))
+    for indice in range(1, num_pages + 1):
+        if paginas and indice <= len(paginas):
+            texto = str(paginas[indice - 1].get("text", "")).strip()
+        else:
+            texto = ""
+            
+        metadata: Dict[str, Any] = {"origen_texto": "nativo", "total_paginas": num_pages}
         crudo = crudos[indice - 1] if indice <= len(crudos) else ""
-        # pymupdf4llm descarta spans con fuentes matemáticas (CMMI/CMSY de LaTeX):
-        # si perdió parte sustancial de la página, el texto plano es más fiel.
-        if _retencion(crudo, texto) < UMBRAL_RETENCION_MD:
+        
+        if not paginas or _retencion(crudo, texto) < UMBRAL_RETENCION_MD:
             texto = crudo
             metadata["origen_texto"] = "nativo_plano"
+            
         if not texto:
             texto, confianza = _ocr_pagina_pdf(ruta, indice - 1)
             metadata.update(origen_texto="ocr", confianza=round(confianza, 4))
+            
         registros.append(_registro(ruta, "pdf", indice, texto, metadata))
 
     registros = _limpiar_boilerplate_pdf(registros)

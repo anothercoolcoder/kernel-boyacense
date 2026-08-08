@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# Vector database & generated indexes
+base_vectorial/
+chroma_db/
+corpus_adl/
+doc_id_registry.json
+queries.jsonl
+resultados.jsonl
+salida/
+
+# Scratch & Debug
+debug_chunks.py
+*.log
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store

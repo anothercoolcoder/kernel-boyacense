@@ -1,59 +1,37 @@
-import os
-import json
-import numpy as np
-import faiss
-from langchain_huggingface import HuggingFaceEmbeddings
+import sys
+from pathlib import Path
 
-FAISS_DIR = "./base_vectorial/encoder_multilingual-e5-large-instruct"
-MODELO_EMBEDDINGS = "intfloat/multilingual-e5-large-instruct"
+# Asegurar que el directorio raíz del proyecto esté en sys.path
+RAIZ = Path(__file__).parent.parent
+if str(RAIZ) not in sys.path:
+    sys.path.insert(0, str(RAIZ))
 
-def probar_busqueda(pregunta: str, k: int = 3):
-    index_path = os.path.join(FAISS_DIR, "index.faiss")
-    metadata_path = os.path.join(FAISS_DIR, "metadata.jsonl")
+from recuperar.recuperar import BuscadorHibrido
 
-    if not os.path.exists(index_path):
-        print(f"El archivo '{index_path}' no existe. Ejecuta primero el pipeline (python main.py)")
-        return
 
-    # Cargar índice FAISS nativo
-    index = faiss.read_index(index_path)
+def probar_busqueda(pregunta: str):
+    buscador = BuscadorHibrido()
+    resultado = buscador.buscar(pregunta, top_k_docs=3, top_k_chunks=5)
 
-    # Cargar metadata
-    metadatos = []
-    with open(metadata_path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                metadatos.append(json.loads(line))
-
-    embeddings = HuggingFaceEmbeddings(
-        model_name=MODELO_EMBEDDINGS,
-        model_kwargs={'device': 'cpu'},
-        encode_kwargs={'normalize_embeddings': True}
-    )
-
-    instruccion = "Given a web search query, retrieve relevant passages that answer the query"
-    query_formateada = f"Instruct: {instruccion}\nQuery: {pregunta}"
-
-    query_vector = np.array([embeddings.embed_query(query_formateada)], dtype=np.float32)
-    scores, indices = index.search(query_vector, k)
-
-    print("="*80)
+    print("=" * 80)
     print(f"PREGUNTA: '{pregunta}'")
-    print("="*80)
+    print("=" * 80)
 
-    for i, (score, idx) in enumerate(zip(scores[0], indices[0]), 1):
-        if idx < 0 or idx >= len(metadatos):
-            continue
-        meta = metadatos[idx]
-        print(f"\n--- Resultado #{i} (Score Similitud IP: {score:.4f}) ---")
-        print(f"Archivo: {meta.get('fuente', 'Desconocido')}")
-        print(f"Doc ID : {meta.get('doc_id', 'Desconocido')}")
-        print(f"Chunk  : {meta.get('chunk_id', 'Desconocido')}")
-        print(f"Formato: {meta.get('formato', 'Desconocido')}")
-        print(f"\nCONTENIDO:\n{meta.get('texto', '').strip()}")
+    print("\n--- TOP DOCUMENTOS (F1@3) ---")
+    for doc in resultado["documents"]:
+        print(f"Rank {doc['rank']}: {doc['doc_id']}")
+
+    print("\n--- TOP FRAGMENTOS HÍBRIDOS (NDCG@10 / RRF) ---")
+    for frag in resultado["fragments"]:
+        print(f"\n--- Resultado #{frag['rank']} (Score RRF: {frag['score_rrf']:.5f}) ---")
+        print(f"Archivo: {frag.get('fuente', 'Desconocido')}")
+        print(f"Doc ID : {frag.get('doc_id', 'Desconocido')}")
+        print(f"Chunk  : {frag.get('chunk_id', 'Desconocido')}")
+        print(f"Tokens : {frag.get('num_tokens', 0)} | Palabras: {len(frag.get('text', '').split())}")
+        print(f"\nCONTENIDO:\n{frag.get('text', '').strip()}")
         print("-" * 80)
+
 
 if __name__ == "__main__":
     question = input("Ingrese pregunta para hacerle al sistema: ")
-    probar_busqueda(question, k=5)
+    probar_busqueda(question)

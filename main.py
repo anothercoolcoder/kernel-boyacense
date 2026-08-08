@@ -65,7 +65,7 @@ def _descubrir_archivos(corpus: Path) -> list[Path]:
         p for p in corpus.rglob("*")
         if p.is_file()
         and not p.name.startswith(".")
-        and p.suffix.lower() in soportados
+        and any(p.name.lower().endswith(ext) for ext in soportados)
     )
     return archivos
 
@@ -99,7 +99,7 @@ def main() -> None:
             for r in nuevos:
                 r.setdefault("metadata", {})["fenomeno"] = fenomeno
             registros.extend(nuevos)
-            logger.info("  [+] %s → %d registros", ruta.name, len(nuevos))
+            logger.info("  [+] %s -> %d registros", ruta.name, len(nuevos))
         except ErrorExtraccion as exc:
             logger.warning("  [-] %s ignorado: %s", ruta.name, exc)
 
