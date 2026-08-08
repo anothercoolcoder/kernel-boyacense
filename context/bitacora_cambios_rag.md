@@ -71,3 +71,60 @@ sin anotaciones, métricas principales quedan `null`.
 - Baseline procesó 123 consultas activas.
 - `incomplete_rate`: `0.0`.
 - `annotated_queries`: `0`; `NDCG@10` y `F1@3` quedan `null` hasta anotar ground truth.
+
+## 2026-08-08 - Fase 3: pivote CombSUM
+
+### Implementado
+
+- `recuperar/recuperar.py`
+  - CombSUM queda como fusión predeterminada.
+  - Scores BM25 y FAISS se normalizan mediante min-max a `[0, 1]`.
+  - RRF permanece disponible con `fusion_method="rrf"` para comparación baseline.
+  - Desempate determinista por índice.
+  - Campo de salida renombrado a `score_fusion`.
+  - Diagnóstico registra método de fusión.
+- `benchmark_rag.py`
+  - Permite ejecutar `--fusion-method combsum` o `--fusion-method rrf`.
+- `test/test_recuperar_contrato.py`
+  - Prueba de normalización CombSUM.
+
+### Limitación
+
+Comparación NDCG@10/F1@3 aún no posible: ground truth sigue sin anotarse.
+
+### Verificación
+
+- `python -m unittest test.test_recuperar_contrato test.test_benchmark_rag -v`: 6 pruebas OK.
+- `python -m py_compile recuperar/recuperar.py benchmark_rag.py`: OK.
+- Corrida CombSUM: 123 consultas, `incomplete_rate=0.0`.
+- Corrida RRF: 123 consultas, `incomplete_rate=0.0`.
+- Ambas corridas: `annotated_queries=0`; métricas de calidad `null`.
+
+## 2026-08-08 - Fase 4: ground truth candidato
+
+### Implementado
+
+- `preparar_ground_truth.py`
+  - Alinea preguntas y respuestas por orden.
+  - Asocia grupos documentales con `doc_id` del registro actual.
+  - Busca candidatos por coincidencia léxica normalizada en metadata.
+  - Conserva página, sección y score candidato.
+  - Genera `context/benchmark_rag.jsonl`.
+- `benchmark_rag.py`
+  - Solo cuenta registros con `annotation_status="approved"`.
+- `test/test_ground_truth.py`
+  - Impide que borradores contaminen métricas.
+
+### Regla de anotación
+
+`candidate_chunks` son sugerencias automáticas, no ground truth.
+Revisor debe confirmar `relevant_doc_ids`, `relevant_chunk_ids` y
+`graded_relevance`; después cambiar `annotation_status` a `approved`.
+No borrar historial ni convertir automáticamente candidatos en verdad.
+
+### Estado del borrador
+
+- Registros: `123`.
+- Registros con candidatos automáticos: `115`.
+- Registros sin candidatos automáticos: `8`.
+- Registros aprobados: `0`.

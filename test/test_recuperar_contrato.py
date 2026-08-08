@@ -17,6 +17,10 @@ class ModeloFalso:
 
 
 class TestContratoRecuperacion(unittest.TestCase):
+    def test_normalizacion_combsum(self):
+        scores = BuscadorHibrido._normalizar_scores({1: 2.0, 2: 4.0})
+        self.assertEqual(scores, {1: 0.0, 2: 1.0})
+
     def test_recorte_conserva_oraciones_y_limite(self):
         texto = "Primera oración completa. Segunda oración demasiado larga."
         resultado = BuscadorHibrido._recortar_a_250_palabras(texto, max_words=3)

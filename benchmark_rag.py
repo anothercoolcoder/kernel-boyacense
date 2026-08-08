@@ -98,7 +98,11 @@ def ejecutar_benchmark(
 
         retrieved_docs = [item.get("doc_id") for item in resultado.get("documents", [])]
         retrieved_chunks = [item.get("chunk_id") for item in resultado.get("fragments", [])]
-        anotado = bool(registro.get("relevant_doc_ids")) and bool(registro.get("graded_relevance"))
+        anotado = (
+            registro.get("annotation_status", "approved") == "approved"
+            and bool(registro.get("relevant_doc_ids"))
+            and bool(registro.get("graded_relevance"))
+        )
         detalle: dict[str, Any] = {
             "query_id": registro["query_id"],
             "retrieved_doc_ids": retrieved_docs,
@@ -131,6 +135,7 @@ def main() -> None:
     parser.add_argument("--questions", type=Path, default=Path("preguntas.txt"))
     parser.add_argument("--annotations", type=Path)
     parser.add_argument("--output", type=Path, default=Path("resultados_benchmark.json"))
+    parser.add_argument("--fusion-method", choices=("combsum", "rrf"), default="combsum")
     args = parser.parse_args()
 
     from recuperar.recuperar import BuscadorHibrido
@@ -142,7 +147,16 @@ def main() -> None:
             registro.update(anotaciones.get(registro["query_id"], {}))
 
     buscador = BuscadorHibrido()
-    reporte = ejecutar_benchmark(registros, lambda query: buscador.buscar(query, top_k_docs=3, top_k_chunks=10))
+    reporte = ejecutar_benchmark(
+        registros,
+        lambda query: buscador.buscar(
+            query,
+            top_k_docs=3,
+            top_k_chunks=10,
+            fusion_method=args.fusion_method,
+        ),
+    )
+    reporte["fusion_method"] = args.fusion_method
     with open(args.output, "w", encoding="utf-8") as archivo:
         json.dump(reporte, archivo, ensure_ascii=False, indent=2)
     print(json.dumps({key: value for key, value in reporte.items() if key != "per_query"}, ensure_ascii=False, indent=2))

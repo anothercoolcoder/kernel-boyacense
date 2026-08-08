@@ -1,10 +1,10 @@
-"""Módulo de Recuperación Híbrida (BM25 + FAISS + RRF) para el Kernel Boyacense.
+"""Módulo de Recuperación Híbrida (BM25 + FAISS + CombSUM) para el Kernel Boyacense.
 
 Cumple estrictamente con las reglas de negocio del CODEFEST AD ASTRA 2026:
 1. 100% determinista / libre de modelos generativos LLM en recuperación (§8.3).
 2. Agregación a nivel de documento para F1@3 (§8.6).
 3. Fragmentos recortados a máximo 250 palabras respetando oraciones (§9.2.1).
-4. Fusión Reciprocal Rank Fusion (RRF) con k0=60 (§8.4).
+4. Fusión CombSUM con RRF disponible como baseline (§8.4).
 """
 
 from __future__ import annotations
@@ -75,7 +75,7 @@ class BM25Nativo:
 
 
 class BuscadorHibrido:
-    """Motor de búsqueda híbrida combinando BM25 y FAISS mediante Reciprocal Rank Fusion."""
+    """Motor de búsqueda híbrida combinando BM25 y FAISS."""
 
     def __init__(self, faiss_dir: Path | str = FAISS_DIR_DEFAULT):
         self.faiss_dir = Path(faiss_dir)
@@ -142,6 +142,20 @@ class BuscadorHibrido:
             return 0.0
         return len(set1 & set2) / len(set1 | set2)
 
+    @staticmethod
+    def _normalizar_scores(scores: Dict[int, float]) -> Dict[int, float]:
+        """Normaliza scores a [0, 1] mediante min-max determinista."""
+        if not scores:
+            return {}
+        minimo = min(scores.values())
+        maximo = max(scores.values())
+        if maximo == minimo:
+            return {idx: 1.0 for idx in scores}
+        return {
+            idx: (score - minimo) / (maximo - minimo)
+            for idx, score in scores.items()
+        }
+
     def buscar(
         self,
         pregunta: str,
@@ -149,13 +163,17 @@ class BuscadorHibrido:
         top_k_chunks: int = 10,
         candidate_k: int = 60,
         rrf_k0: int = 60,
+        fusion_method: str = "combsum",
     ) -> Dict[str, Any]:
         """Ejecuta la búsqueda híbrida determinista y devuelve documentos y fragmentos ordenados."""
+        if fusion_method not in {"combsum", "rrf"}:
+            raise ValueError("fusion_method debe ser 'combsum' o 'rrf'")
         self._cargar_modelo_embeddings()
 
         # 1. Búsqueda Dispersa (BM25)
         bm25_results = self.bm25.search(pregunta, top_k=candidate_k)
         bm25_ranks = {idx: rank + 1 for rank, (idx, _) in enumerate(bm25_results)}
+        bm25_scores = {idx: score for idx, score in bm25_results}
 
         # 2. Búsqueda Densa (FAISS con prefijo e5)
         instruccion = "Given a question, retrieve passages from documents that contain the exact factual information needed to answer the question"
@@ -164,22 +182,34 @@ class BuscadorHibrido:
 
         scores_faiss, indices_faiss = self.faiss_index.search(query_vector, candidate_k)
         faiss_ranks = {int(idx): rank + 1 for rank, idx in enumerate(indices_faiss[0]) if idx >= 0}
+        faiss_scores = {
+            int(idx): float(score)
+            for score, idx in zip(scores_faiss[0], indices_faiss[0])
+            if idx >= 0
+        }
 
-        # 3. Fusión RRF (Reciprocal Rank Fusion)
+        # 3. Fusión configurable: CombSUM principal, RRF para baseline.
         todos_indices = set(bm25_ranks.keys()) | set(faiss_ranks.keys())
-        rrf_scores: List[Tuple[int, float]] = []
+        fused_scores: List[Tuple[int, float]] = []
 
-        for idx in todos_indices:
-            r_bm25 = bm25_ranks.get(idx, candidate_k + 1)
-            r_faiss = faiss_ranks.get(idx, candidate_k + 1)
-            score_rrf = (1.0 / (rrf_k0 + r_bm25)) + (1.0 / (rrf_k0 + r_faiss))
-            rrf_scores.append((idx, score_rrf))
+        if fusion_method == "combsum":
+            bm25_normalizados = self._normalizar_scores(bm25_scores)
+            faiss_normalizados = self._normalizar_scores(faiss_scores)
+            for idx in todos_indices:
+                score = bm25_normalizados.get(idx, 0.0) + faiss_normalizados.get(idx, 0.0)
+                fused_scores.append((idx, score))
+        else:
+            for idx in todos_indices:
+                r_bm25 = bm25_ranks.get(idx, candidate_k + 1)
+                r_faiss = faiss_ranks.get(idx, candidate_k + 1)
+                score = (1.0 / (rrf_k0 + r_bm25)) + (1.0 / (rrf_k0 + r_faiss))
+                fused_scores.append((idx, score))
 
-        rrf_scores.sort(key=lambda x: x[1], reverse=True)
+        fused_scores.sort(key=lambda item: (-item[1], item[0]))
 
         # 4. Agregación Documental (Max Pooling sobre RRF) para F1@3
         doc_scores: Dict[str, float] = {}
-        for idx, score in rrf_scores:
+        for idx, score in fused_scores:
             doc_id = self.metadatos[idx]["doc_id"]
             if doc_id not in doc_scores or score > doc_scores[doc_id]:
                 doc_scores[doc_id] = score
@@ -214,12 +244,12 @@ class BuscadorHibrido:
         chunks_seleccionados: List[Dict[str, Any]] = []
         textos_vistos_por_doc: Dict[str, List[str]] = {}
 
-        indices_ordenados = list(rrf_scores)
+        indices_ordenados = list(fused_scores)
         indices_ordenados.extend(
             (idx, 0.0)
             for idx, meta in enumerate(self.metadatos)
             if meta.get("doc_id") in docs_seleccionados
-            and idx not in {candidate_idx for candidate_idx, _ in rrf_scores}
+            and idx not in {candidate_idx for candidate_idx, _ in fused_scores}
         )
         chunks_rellenados = 0
 
@@ -254,7 +284,7 @@ class BuscadorHibrido:
                 "chunk_id": chunk_id,
                 "doc_id": doc_id,
                 "text": texto_recortado,
-                "score_rrf": float(score),
+                "score_fusion": float(score),
                 "fuente": meta.get("fuente", ""),
                 "num_tokens": meta.get("num_tokens", 0),
                 "padding": score == 0.0,
@@ -269,6 +299,7 @@ class BuscadorHibrido:
                 "padded_fragments": chunks_rellenados,
                 "documents_requested": top_k_docs,
                 "fragments_requested": top_k_chunks,
+                "fusion_method": fusion_method,
             },
         }
 
