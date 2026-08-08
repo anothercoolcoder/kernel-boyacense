@@ -41,3 +41,33 @@ Cada fase debe agregar nueva entrada con fecha, archivos, cambios y pruebas.
 - `python -m unittest test.test_recuperar_contrato -v`: 2 pruebas OK.
 - Smoke test con índice reindexado: pendiente; requiere cargar modelo.
 - Confirmar cardinalidad exacta en todas las preguntas: pendiente.
+
+## 2026-08-08 - Fase 2: benchmark local
+
+### Implementado
+
+- `benchmark_rag.py`
+  - Carga preguntas desde `preguntas.txt` con IDs estables.
+  - Carga ground truth opcional desde JSONL.
+  - Calcula `NDCG@10` con relevancia graduada.
+  - Calcula `F1@3` documental.
+  - Valida cardinalidad, IDs únicos, pertenencia documental y límite de palabras.
+  - Reporta consultas anotadas, no anotadas e incompletas.
+  - No usa LLM, decoder ni generación de respuestas.
+- `test/test_benchmark_rag.py`
+  - Pruebas unitarias de NDCG, F1 y ejecución con ground truth.
+
+### Limitación explícita
+
+`preguntas.txt` y `respuestas.txt` no contienen todavía `relevant_doc_ids`,
+`relevant_chunk_ids` ni `graded_relevance`. Runner no inventa ground truth;
+sin anotaciones, métricas principales quedan `null`.
+
+### Verificación pendiente
+
+- `python -m unittest test.test_benchmark_rag test.test_recuperar_contrato -v`: 5 pruebas OK.
+- `python -m py_compile benchmark_rag.py test/test_benchmark_rag.py`: OK.
+- `python benchmark_rag.py --output resultados_benchmark_baseline.json`: OK.
+- Baseline procesó 123 consultas activas.
+- `incomplete_rate`: `0.0`.
+- `annotated_queries`: `0`; `NDCG@10` y `F1@3` quedan `null` hasta anotar ground truth.
