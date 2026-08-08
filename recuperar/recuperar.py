@@ -113,12 +113,26 @@ class BuscadorHibrido:
 
     @staticmethod
     def _recortar_a_250_palabras(texto: str, max_words: int = 250) -> str:
-        words = texto.split()
-        if len(words) <= max_words:
+        if contar_palabras(texto) <= max_words:
             return texto
-        
-        # Recorte simple por palabras respetando límite estricto
-        return " ".join(words[:max_words])
+
+        # Acumula oraciones completas para no cortar evidencia lingüística.
+        oraciones = re.split(r"(?<=[.!?])\s+", texto.strip())
+        resultado: List[str] = []
+        palabras = 0
+        for oracion in oraciones:
+            cantidad = contar_palabras(oracion)
+            if not oracion or palabras + cantidad > max_words:
+                break
+            resultado.append(oracion)
+            palabras += cantidad
+
+        if resultado:
+            return " ".join(resultado)
+
+        # Caso extremo: una sola oración supera el contrato; prioriza límite
+        # formal para evitar emitir fragmentos inválidos.
+        return " ".join(texto.split()[:max_words])
 
     @staticmethod
     def _jaccard_similarity(text1: str, text2: str) -> float:
@@ -170,7 +184,27 @@ class BuscadorHibrido:
             if doc_id not in doc_scores or score > doc_scores[doc_id]:
                 doc_scores[doc_id] = score
 
-        top_docs_sorted = sorted(doc_scores.items(), key=lambda x: x[1], reverse=True)[:top_k_docs]
+        # Completa documentos con IDs únicos y score cero cuando ranking no
+        # alcanza cardinalidad. Nunca duplica documentos del índice.
+        doc_order: List[str] = []
+        for meta in self.metadatos:
+            doc_id = meta.get("doc_id", "")
+            if doc_id and doc_id not in doc_order:
+                doc_order.append(doc_id)
+
+        top_docs_sorted = sorted(
+            doc_scores.items(), key=lambda x: (-x[1], x[0])
+        )[:top_k_docs]
+        docs_seleccionados = {doc_id for doc_id, _ in top_docs_sorted}
+        docs_rellenados: List[str] = []
+        for doc_id in doc_order:
+            if len(top_docs_sorted) >= top_k_docs:
+                break
+            if doc_id not in docs_seleccionados:
+                top_docs_sorted.append((doc_id, 0.0))
+                docs_seleccionados.add(doc_id)
+                docs_rellenados.append(doc_id)
+
         documents_output = [
             {"rank": rank + 1, "doc_id": doc_id}
             for rank, (doc_id, _) in enumerate(top_docs_sorted)
@@ -180,12 +214,28 @@ class BuscadorHibrido:
         chunks_seleccionados: List[Dict[str, Any]] = []
         textos_vistos_por_doc: Dict[str, List[str]] = {}
 
-        for idx, score in rrf_scores:
+        indices_ordenados = list(rrf_scores)
+        indices_ordenados.extend(
+            (idx, 0.0)
+            for idx, meta in enumerate(self.metadatos)
+            if meta.get("doc_id") in docs_seleccionados
+            and idx not in {candidate_idx for candidate_idx, _ in rrf_scores}
+        )
+        chunks_rellenados = 0
+
+        for idx, score in indices_ordenados:
             if len(chunks_seleccionados) >= top_k_chunks:
                 break
 
             meta = self.metadatos[idx]
             doc_id = meta["doc_id"]
+            if doc_id not in docs_seleccionados:
+                continue
+            chunk_id = meta.get("chunk_id", "")
+            if not chunk_id:
+                continue
+            if any(f["chunk_id"] == chunk_id for f in chunks_seleccionados):
+                continue
             texto = meta["texto"]
 
             # Evitar solape excesivo con chunks ya seleccionados del mismo documento
@@ -196,18 +246,33 @@ class BuscadorHibrido:
 
             vistos.append(texto)
             texto_recortado = self._recortar_a_250_palabras(texto, max_words=250)
+            if score == 0.0:
+                chunks_rellenados += 1
 
             chunks_seleccionados.append({
                 "rank": len(chunks_seleccionados) + 1,
-                "chunk_id": meta["chunk_id"],
+                "chunk_id": chunk_id,
                 "doc_id": doc_id,
                 "text": texto_recortado,
                 "score_rrf": float(score),
                 "fuente": meta.get("fuente", ""),
                 "num_tokens": meta.get("num_tokens", 0),
+                "padding": score == 0.0,
             })
 
         return {
             "documents": documents_output,
             "fragments": chunks_seleccionados,
+            "diagnostics": {
+                "document_candidates": len(doc_scores),
+                "padded_documents": docs_rellenados,
+                "padded_fragments": chunks_rellenados,
+                "documents_requested": top_k_docs,
+                "fragments_requested": top_k_chunks,
+            },
         }
+
+
+def contar_palabras(texto: str) -> int:
+    """Cuenta palabras según contrato de salida y validación."""
+    return len(texto.split())

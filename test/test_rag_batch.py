@@ -1,13 +1,17 @@
 import os
 import json
-import numpy as np
-import faiss
+import sys
+from pathlib import Path
 from datetime import datetime
-from langchain_huggingface import HuggingFaceEmbeddings
+
+# Asegurar que el directorio raíz del proyecto esté en sys.path
+RAIZ = Path(__file__).parent.parent
+if str(RAIZ) not in sys.path:
+    sys.path.insert(0, str(RAIZ))
+
+from recuperar.recuperar import BuscadorHibrido
 
 # ================== CONFIGURACIÓN ==================
-FAISS_DIR = "./base_vectorial/encoder_multilingual-e5-large-instruct"
-MODELO_EMBEDDINGS = "intfloat/multilingual-e5-large-instruct"
 ARCHIVO_PREGUNTAS = "preguntas.txt"          # o "preguntas.md"
 ARCHIVO_SALIDA = "resultados_rag.json"       # salida estructurada para análisis
 K = 5                                        # número de chunks a recuperar
@@ -27,32 +31,11 @@ def cargar_preguntas(ruta: str) -> list[str]:
     return preguntas
 
 def probar_busqueda_batch(preguntas: list[str], k: int = 5):
-    index_path = os.path.join(FAISS_DIR, "index.faiss")
-    metadata_path = os.path.join(FAISS_DIR, "metadata.jsonl")
-
-    if not os.path.exists(index_path):
-        print(f"El archivo '{index_path}' no existe. Ejecuta primero el pipeline.")
-        return
-
-    # Cargar índice y metadata
-    index = faiss.read_index(index_path)
-    metadatos = []
-    with open(metadata_path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                metadatos.append(json.loads(line))
-
-    embeddings = HuggingFaceEmbeddings(
-        model_name=MODELO_EMBEDDINGS,
-        model_kwargs={"device": "cpu"},
-        encode_kwargs={"normalize_embeddings": True}
-    )
-
-    instruccion = "Given a web search query, retrieve relevant passages that answer the query"
+    buscador = BuscadorHibrido()
     resultados = {
         "fecha": datetime.now().isoformat(),
-        "modelo": MODELO_EMBEDDINGS,
+        "estrategia": "BuscadorHibrido.buscar",
+        "top_k_docs": 3,
         "k": k,
         "total_preguntas": len(preguntas),
         "preguntas": []
@@ -63,29 +46,17 @@ def probar_busqueda_batch(preguntas: list[str], k: int = 5):
     for idx_preg, pregunta in enumerate(preguntas, 1):
         print(f"[{idx_preg}/{len(preguntas)}] {pregunta[:80]}...")
 
-        query_formateada = f"Instruct: {instruccion}\nQuery: {pregunta}"
-        query_vector = np.array([embeddings.embed_query(query_formateada)], dtype=np.float32)
-        scores, indices = index.search(query_vector, k)
-
-        chunks_recuperados = []
-        for rank, (score, idx) in enumerate(zip(scores[0], indices[0]), 1):
-            if idx < 0 or idx >= len(metadatos):
-                continue
-            meta = metadatos[idx]
-            chunks_recuperados.append({
-                "rank": rank,
-                "score": float(score),
-                "fuente": meta.get("fuente", "Desconocido"),
-                "doc_id": meta.get("doc_id", "Desconocido"),
-                "chunk_id": meta.get("chunk_id", "Desconocido"),
-                "formato": meta.get("formato", "Desconocido"),
-                "texto": meta.get("texto", "").strip()
-            })
+        resultado = buscador.buscar(
+            pregunta,
+            top_k_docs=3,
+            top_k_chunks=k,
+        )
 
         resultados["preguntas"].append({
             "id": idx_preg,
             "pregunta": pregunta,
-            "chunks": chunks_recuperados
+            "documents": resultado["documents"],
+            "fragments": resultado["fragments"],
         })
 
     # Guardar JSON completo

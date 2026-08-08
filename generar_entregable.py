@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
-from recuperar.recuperar import BuscadorHibrido
+from recuperar.recuperar import BuscadorHibrido, contar_palabras
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("generar_entregable")
@@ -38,11 +38,18 @@ def validar_esquema_salida(resultados: List[Dict[str, Any]]) -> None:
 
         frags = res.get("fragments", [])
         assert len(frags) == 10, f"Consulta {q_id}: deben ser exactamente 10 fragmentos (NDCG@10), hay {len(frags)}"
+        doc_ids = [doc["doc_id"] for doc in docs]
+        assert len(set(doc_ids)) == 3, f"Consulta {q_id}: doc_id duplicado"
+        chunk_ids = [frag.get("chunk_id") for frag in frags]
+        assert len(set(chunk_ids)) == 10, f"Consulta {q_id}: chunk_id duplicado"
         for frag in frags:
             assert "rank" in frag and "chunk_id" in frag and "doc_id" in frag and "text" in frag, (
                 f"Consulta {q_id}: estructura de fragmento inválida"
             )
-            palabras = len(frag["text"].split())
+            assert frag["doc_id"] in doc_ids, (
+                f"Consulta {q_id}: fragmento {frag['chunk_id']} fuera de documents"
+            )
+            palabras = contar_palabras(frag["text"])
             assert palabras <= 250, (
                 f"Consulta {q_id}, chunk {frag['chunk_id']}: excede 250 palabras ({palabras} palabras)"
             )
