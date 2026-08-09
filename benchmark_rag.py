@@ -36,6 +36,20 @@ def cargar_anotaciones(path: Path | str) -> dict[str, dict[str, Any]]:
     return anotaciones
 
 
+def cargar_dataset_jsonl(path: Path | str) -> list[dict[str, Any]]:
+    """Carga dataset benchmark completo, incluyendo idioma e intent_id."""
+    registros: list[dict[str, Any]] = []
+    with open(path, encoding="utf-8") as archivo:
+        for numero, linea in enumerate(archivo, 1):
+            if not linea.strip():
+                continue
+            registro = json.loads(linea)
+            if not registro.get("query_id") or not registro.get("query"):
+                raise ValueError(f"Registro inválido en línea {numero}")
+            registros.append(registro)
+    return registros
+
+
 def ndcg_at_k(retrieved_chunk_ids: Iterable[str], graded_relevance: dict[str, int], k: int = 10) -> float:
     """Calcula NDCG@k con grados 0, 1 y 2."""
     retrieved = list(retrieved_chunk_ids)[:k]
@@ -133,14 +147,21 @@ def ejecutar_benchmark(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--questions", type=Path, default=Path("preguntas.txt"))
+    parser.add_argument("--dataset", type=Path, help="Dataset JSONL completo; reemplaza --questions")
     parser.add_argument("--annotations", type=Path)
     parser.add_argument("--output", type=Path, default=Path("resultados_benchmark.json"))
     parser.add_argument("--fusion-method", choices=("combsum", "rrf"), default="combsum")
+    parser.add_argument(
+        "--normalization-method",
+        choices=("minmax", "clipped_minmax", "percentile", "zsigmoid"),
+        default="minmax",
+    )
+    parser.add_argument("--alpha", type=float, default=0.5)
     args = parser.parse_args()
 
     from recuperar.recuperar import BuscadorHibrido
 
-    registros = cargar_preguntas(args.questions)
+    registros = cargar_dataset_jsonl(args.dataset) if args.dataset else cargar_preguntas(args.questions)
     if args.annotations:
         anotaciones = cargar_anotaciones(args.annotations)
         for registro in registros:
@@ -154,9 +175,13 @@ def main() -> None:
             top_k_docs=3,
             top_k_chunks=10,
             fusion_method=args.fusion_method,
+            normalization_method=args.normalization_method,
+            alpha=args.alpha,
         ),
     )
     reporte["fusion_method"] = args.fusion_method
+    reporte["normalization_method"] = args.normalization_method
+    reporte["alpha"] = args.alpha
     with open(args.output, "w", encoding="utf-8") as archivo:
         json.dump(reporte, archivo, ensure_ascii=False, indent=2)
     print(json.dumps({key: value for key, value in reporte.items() if key != "per_query"}, ensure_ascii=False, indent=2))

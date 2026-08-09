@@ -21,6 +21,13 @@ class TestContratoRecuperacion(unittest.TestCase):
         scores = BuscadorHibrido._normalizar_scores({1: 2.0, 2: 4.0})
         self.assertEqual(scores, {1: 0.0, 2: 1.0})
 
+    def test_normalizaciones_experimentales(self):
+        scores = {1: 1.0, 2: 2.0, 3: 100.0}
+        for method in ("clipped_minmax", "percentile", "zsigmoid"):
+            resultado = BuscadorHibrido._normalizar_scores(scores, method)
+            self.assertEqual(set(resultado), set(scores))
+            self.assertTrue(all(0.0 <= value <= 1.0 for value in resultado.values()))
+
     def test_recorte_conserva_oraciones_y_limite(self):
         texto = "Primera oración completa. Segunda oración demasiado larga."
         resultado = BuscadorHibrido._recortar_a_250_palabras(texto, max_words=3)

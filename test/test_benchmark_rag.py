@@ -1,9 +1,15 @@
 import unittest
 
-from benchmark_rag import f1_at_3, ndcg_at_k, ejecutar_benchmark
+from benchmark_rag import cargar_dataset_jsonl, f1_at_3, ndcg_at_k, ejecutar_benchmark
 
 
 class TestBenchmarkRag(unittest.TestCase):
+    def test_dataset_multilingue_conserva_idioma(self):
+        registros = cargar_dataset_jsonl("context/benchmark_multilingue.jsonl")
+        self.assertEqual(len(registros), 150)
+        self.assertEqual({registro["language"] for registro in registros}, {"es", "en", "pt"})
+        self.assertEqual(len({registro["intent_id"] for registro in registros}), 50)
+
     def test_ndcg_prioriza_chunk_relevante(self):
         relevancia = {"c1": 2, "c2": 1}
         self.assertEqual(ndcg_at_k(["c1", "c2"], relevancia), 1.0)

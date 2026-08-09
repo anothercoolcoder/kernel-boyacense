@@ -143,18 +143,41 @@ class BuscadorHibrido:
         return len(set1 & set2) / len(set1 | set2)
 
     @staticmethod
-    def _normalizar_scores(scores: Dict[int, float]) -> Dict[int, float]:
-        """Normaliza scores a [0, 1] mediante min-max determinista."""
+    def _normalizar_scores(
+        scores: Dict[int, float], method: str = "minmax"
+    ) -> Dict[int, float]:
+        """Normaliza scores a [0, 1] con método experimental explícito."""
         if not scores:
             return {}
-        minimo = min(scores.values())
-        maximo = max(scores.values())
+        if method == "percentile":
+            valores = sorted(scores.values())
+            divisor = max(1, len(valores) - 1)
+            return {
+                idx: sum(value < score for value in valores) / divisor
+                for idx, score in scores.items()
+            }
+        if method == "zsigmoid":
+            valores = np.array(list(scores.values()), dtype=np.float64)
+            desviacion = float(np.std(valores))
+            if desviacion == 0.0:
+                return {idx: 1.0 for idx in scores}
+            media = float(np.mean(valores))
+            return {
+                idx: 1.0 / (1.0 + math.exp(-((score - media) / desviacion)))
+                for idx, score in scores.items()
+            }
+        if method not in {"minmax", "clipped_minmax"}:
+            raise ValueError("normalization_method inválido")
+        valores = np.array(list(scores.values()), dtype=np.float64)
+        if method == "clipped_minmax":
+            minimo = float(np.percentile(valores, 5))
+            maximo = float(np.percentile(valores, 95))
+        else:
+            minimo = float(np.min(valores))
+            maximo = float(np.max(valores))
         if maximo == minimo:
             return {idx: 1.0 for idx in scores}
-        return {
-            idx: (score - minimo) / (maximo - minimo)
-            for idx, score in scores.items()
-        }
+        return {idx: float(np.clip((score - minimo) / (maximo - minimo), 0.0, 1.0)) for idx, score in scores.items()}
 
     def buscar(
         self,
@@ -164,10 +187,14 @@ class BuscadorHibrido:
         candidate_k: int = 60,
         rrf_k0: int = 60,
         fusion_method: str = "combsum",
+        normalization_method: str = "minmax",
+        alpha: float = 0.5,
     ) -> Dict[str, Any]:
         """Ejecuta la búsqueda híbrida determinista y devuelve documentos y fragmentos ordenados."""
         if fusion_method not in {"combsum", "rrf"}:
             raise ValueError("fusion_method debe ser 'combsum' o 'rrf'")
+        if not 0.0 <= alpha <= 1.0:
+            raise ValueError("alpha debe estar entre 0.0 y 1.0")
         self._cargar_modelo_embeddings()
 
         # 1. Búsqueda Dispersa (BM25)
@@ -193,12 +220,17 @@ class BuscadorHibrido:
         fused_scores: List[Tuple[int, float]] = []
 
         if fusion_method == "combsum":
-            bm25_normalizados = self._normalizar_scores(bm25_scores)
-            faiss_normalizados = self._normalizar_scores(faiss_scores)
+            bm25_normalizados = self._normalizar_scores(bm25_scores, normalization_method)
+            faiss_normalizados = self._normalizar_scores(faiss_scores, normalization_method)
             for idx in todos_indices:
-                score = bm25_normalizados.get(idx, 0.0) + faiss_normalizados.get(idx, 0.0)
+                score = (
+                    alpha * bm25_normalizados.get(idx, 0.0)
+                    + (1.0 - alpha) * faiss_normalizados.get(idx, 0.0)
+                )
                 fused_scores.append((idx, score))
         else:
+            bm25_normalizados = {}
+            faiss_normalizados = {}
             for idx in todos_indices:
                 r_bm25 = bm25_ranks.get(idx, candidate_k + 1)
                 r_faiss = faiss_ranks.get(idx, candidate_k + 1)
@@ -285,6 +317,12 @@ class BuscadorHibrido:
                 "doc_id": doc_id,
                 "text": texto_recortado,
                 "score_fusion": float(score),
+                "score_bm25_raw": float(bm25_scores.get(idx, 0.0)),
+                "score_faiss_raw": float(faiss_scores.get(idx, 0.0)),
+                "score_bm25_normalized": float(bm25_normalizados.get(idx, 0.0)),
+                "score_faiss_normalized": float(faiss_normalizados.get(idx, 0.0)),
+                "rank_bm25": bm25_ranks.get(idx),
+                "rank_faiss": faiss_ranks.get(idx),
                 "fuente": meta.get("fuente", ""),
                 "num_tokens": meta.get("num_tokens", 0),
                 "padding": score == 0.0,
@@ -300,6 +338,8 @@ class BuscadorHibrido:
                 "documents_requested": top_k_docs,
                 "fragments_requested": top_k_chunks,
                 "fusion_method": fusion_method,
+                "normalization_method": normalization_method,
+                "alpha": alpha,
             },
         }
 
