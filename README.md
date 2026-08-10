@@ -55,6 +55,18 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+### 4. Usar el entorno del proyecto
+
+Desde la raíz del repositorio, activar `venv` antes de ejecutar scripts:
+
+```bash
+source venv/bin/activate
+python -c "import sys; print(sys.executable)"
+```
+
+Debe mostrar `.../kernel-boyacense/venv/bin/python`. Sin activar shell, usar
+siempre `venv/bin/python comando.py` para no caer en `/usr/bin/python`.
+
 ---
 
 ## Ejecución del Pipeline Principal (`main.py`)

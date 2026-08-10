@@ -101,6 +101,14 @@ def _preparar_textos(fragmentos: List[dict]) -> tuple[List[str], List[dict]]:
         )
         metadatos.append(meta)
 
+    # El filtro de chunks cortos puede abrir huecos en posiciones generadas
+    # antes de indexar. Metadata final debe conservar ordinal 0-based continuo.
+    posiciones_por_doc: dict[str, int] = {}
+    for meta in metadatos:
+        doc_id = meta["doc_id"]
+        meta["posicion"] = posiciones_por_doc.get(doc_id, 0)
+        posiciones_por_doc[doc_id] = meta["posicion"] + 1
+
     return textos, metadatos
 
 
@@ -161,6 +169,10 @@ def indexar(fragmentos: List[dict], faiss_dir: str = BASE_VECTORIAL_DIR) -> None
     dimension = vectors_np.shape[1]
     index = faiss.IndexFlatIP(dimension)
     index.add(vectors_np)
+
+    # FAISS IndexFlatIP asigna IDs internos ordinales desde cero.
+    for indice, meta in enumerate(metadatos):
+        meta["chunk_id"] = str(indice)
 
     # Persistir índice FAISS puro
     faiss_path = out_dir / "index.faiss"

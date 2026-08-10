@@ -94,6 +94,7 @@ DOC_ID_REGISTRY_PATH: Path = Path(__file__).resolve().parent.parent / "doc_id_re
 _registry_lock = threading.Lock()
 _registry_cache: Dict[str, str] | None = None
 _registry_counter: list[int] = [1]  # envuelto en lista para mutabilidad en closure
+_OFICIAL_ACTUAL: Dict[str, str] | None = None
 
 
 def _cargar_registry() -> Dict[str, str]:
@@ -300,17 +301,23 @@ def _registro(
     que el mismo archivo siempre recibe el mismo identificador, sin importar
     cuántas veces se ejecute el pipeline (regla de negocio de ID fijo).
     """
-    formato_norm = _normalizar_formato(tipo, ruta)
+    oficial = _OFICIAL_ACTUAL or {}
+    formato_norm = oficial.get("formato") or _normalizar_formato(tipo, ruta)
     texto = _limpiar_texto(texto, formato_norm == "pdf")
     return {
-        "doc_id": obtener_doc_id(ruta),
+        "doc_id": oficial.get("doc_id") or obtener_doc_id(ruta),
         "documento": ruta.name,
         "ruta": str(ruta.resolve()),
-        "fuente": _obtener_fuente_relativa(ruta),
+        "fuente": oficial.get("fuente") or _obtener_fuente_relativa(ruta),
         "tipo": formato_norm,
         "pagina": pagina,
         "texto": texto,
-        "metadata": {**_metadata_base(ruta), **(metadata or {})},
+        "metadata": {
+            **_metadata_base(ruta),
+            **(metadata or {}),
+            **({"fenomeno": int(oficial["fenomeno"])} if oficial.get("fenomeno") else {}),
+            **({"metadata_oficial": oficial} if oficial else {}),
+        },
     }
 
 
@@ -1081,7 +1088,10 @@ def extraer_osm_pbf(ruta: Path) -> List[Registro]:
 # --------------------------------------------------------------------------- #
 # API pública
 # --------------------------------------------------------------------------- #
-def extraer_documento(path: str | os.PathLike[str]) -> List[Registro]:
+def extraer_documento(
+    path: str | os.PathLike[str],
+    metadata_oficial: Mapping[str, str] | None = None,
+) -> List[Registro]:
     """Extrae cualquier documento soportado despachando por extensión.
 
     Es el único punto de entrada que deben usar las etapas siguientes del
@@ -1099,6 +1109,7 @@ def extraer_documento(path: str | os.PathLike[str]) -> List[Registro]:
         ErrorExtraccion: si el archivo no existe o la extracción falla.
         FormatoNoSoportado: si la extensión no tiene extractor registrado.
     """
+    global _OFICIAL_ACTUAL
     ruta = Path(path)
     if not ruta.is_file():
         raise ErrorExtraccion(f"No es un archivo existente: {ruta}")
@@ -1118,12 +1129,16 @@ def extraer_documento(path: str | os.PathLike[str]) -> List[Registro]:
         )
 
     logger.debug("Extrayendo %s con %s", ruta.name, extractor.__name__)
+    anterior = _OFICIAL_ACTUAL
+    _OFICIAL_ACTUAL = dict(metadata_oficial) if metadata_oficial else None
     try:
         return extractor(ruta)
     except ErrorExtraccion:
         raise
     except Exception as exc:  # ningún documento corrupto debe tumbar el corpus
         raise ErrorExtraccion(f"Fallo extrayendo {ruta}: {exc}") from exc
+    finally:
+        _OFICIAL_ACTUAL = anterior
 
 
 # --------------------------------------------------------------------------- #
