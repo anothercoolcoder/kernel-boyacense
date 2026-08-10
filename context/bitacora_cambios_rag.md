@@ -606,3 +606,164 @@ base congelada para siguiente experimento de recuperación cross-lingual.
   `resultados_multilingue_combsum_gt_corregido.json`.
 - Pilot, alpha sweep y test serán recalculados desde GT corregido.
 - Resultados anteriores no reutilizados.
+
+## 2026-08-10 - Implementación inventario oficial sobre corpus prueba
+
+### Implementado
+
+- `lib/inventario_oficial.py`
+  - Carga `Inventario de Archivos` desde XLSX usando biblioteca estándar.
+  - Resuelve archivo prueba contra `DOC_ID`, `Fenómeno`, `Carpeta`, nombre y extensión oficial.
+  - Rechaza resolución ambigua por nombre.
+- `main.py`
+  - Usa inventario oficial antes de extracción.
+  - Limita descubrimiento a formatos oficiales.
+  - Acepta `--faiss-dir` para evitar sobrescribir índice baseline.
+- `extraccion/extraccion.py`
+  - Propaga `doc_id`, `fuente`, `formato` y `fenomeno` oficiales a todos los registros.
+- `indexar/indexar.py`
+  - Asigna `chunk_id` como ordinal interno FAISS después de agregar vectores.
+- `preparar_ground_truth.py`
+  - Cambia grupos del corpus prueba a IDs oficiales `F*`.
+  - Genera salida separada `context/benchmark_rag_oficial_prueba.jsonl`.
+  - Acepta `--metadata` y `--salida`; no requiere edición manual de JSONL.
+- `auditar_oficial.py`
+  - Valida cobertura documental, IDs, fenómeno, formato, fuente, posiciones, chunk_id ordinal y contrato de resultados.
+
+### Configuración congelada
+
+- CombSUM.
+- Normalización min-max.
+- `alpha=0.1`.
+- `intfloat/multilingual-e5-large-instruct`.
+- CPU en recuperación.
+- Top-3 documentos, top-10 fragmentos, máximo 250 palabras.
+
+### Verificación
+
+- Inventario cargado: `1826` filas.
+- Corpus prueba resuelto: `11/11` archivos PDF.
+- IDs oficiales prueba únicos: OK.
+- Fenómenos prueba `1/2/3`: OK.
+- `py_compile`: OK.
+- `git diff --check`: OK.
+
+### Bloqueo
+
+No se generaron índice ni metadata nuevos: entorno carece de `pymupdf4llm`, `numpy`, `transformers`, `faiss` y `torch`. Dry-run terminó con `0` registros extraídos. No inventar resultados ni reescribir JSONL manualmente. Instalar dependencias antes de ejecutar:
+
+```bash
+python main.py corpus_adl --faiss-dir base_vectorial/encoder_multilingual-e5-large-instruct-prueba
+python preparar_ground_truth.py --metadata base_vectorial/encoder_multilingual-e5-large-instruct-prueba/metadata.jsonl --salida context/benchmark_rag_oficial_prueba.jsonl
+python auditar_oficial.py --metadata base_vectorial/encoder_multilingual-e5-large-instruct-prueba/metadata.jsonl --resultados entrega/resultados.jsonl
+```
+
+### Corrección posterior
+
+- `indexar/indexar.py`: renumera `posicion` después del filtro de chunks cortos; evita huecos en metadata final.
+- `auditar_oficial.py`: acepta `--corpus` para auditar únicamente corpus prueba sin exigir 1.826 documentos durante prueba parcial.
+
+Comando actualizado:
+
+```bash
+python auditar_oficial.py \
+  --metadata base_vectorial/encoder_multilingual-e5-large-instruct-prueba/metadata.jsonl \
+  --corpus corpus_adl
+```
+
+### Siguiente paso: benchmark corpus prueba
+
+- `benchmark_rag.py`: acepta `--faiss-dir`; baseline queda intacto.
+- Ground truth oficial: `123` registros `draft`, `0` aprobados, `306` candidatos únicos y referencias válidas.
+- Reranker no agregado; configuración base permanece congelada.
+
+Comando de ejecución:
+
+```bash
+python benchmark_rag.py \
+  --dataset context/benchmark_rag_oficial_prueba.jsonl \
+  --faiss-dir base_vectorial/encoder_multilingual-e5-large-instruct-prueba \
+  --fusion-method combsum \
+  --normalization-method minmax \
+  --alpha 0.1 \
+  --output resultados_benchmark_oficial_prueba.json
+```
+
+Ejecución en este entorno bloqueada por `ModuleNotFoundError: No module named 'numpy'`. Sin métricas inventadas. Reranker queda pendiente hasta congelar benchmark base.
+
+### Benchmark base ejecutado en entorno del usuario
+
+- Dataset: `context/benchmark_rag_oficial_prueba.jsonl`.
+- Índice: `base_vectorial/encoder_multilingual-e5-large-instruct-prueba`.
+- Consultas: `123`.
+- `incomplete_rate`: `0.0`.
+- `annotated_queries`: `0`.
+- `NDCG@10`: `null`.
+- `F1@3`: `null`.
+- Configuración: CombSUM, min-max, `alpha=0.1`.
+- Artefacto: `resultados_benchmark_oficial_prueba.json`.
+
+Revisión humana conectada mediante parámetros existentes:
+
+```bash
+python revisar_ground_truth.py \
+  --dataset context/benchmark_rag_oficial_prueba.jsonl \
+  --results resultados_benchmark_oficial_prueba.json \
+  --metadata base_vectorial/encoder_multilingual-e5-large-instruct-prueba/metadata.jsonl
+```
+
+No integrar reranker antes de aprobar y congelar este baseline.
+
+### Migración y baseline aprobado
+
+- Ambiente correcto: `venv/bin/python`; `/usr/bin/python` no tenía dependencias.
+- `migrar_ground_truth_oficial.py` transfirió ground truth humano aprobado usando coincidencia exacta de documento, texto y página.
+- Registros aprobados: `123/123`.
+- Chunks mapeados: `2217`.
+- IDs documentales oficiales: verificados.
+- Chunks graduados presentes en metadata nueva: verificados.
+- Baseline CombSUM/min-max/alpha `0.1`:
+  - `NDCG@10=0.7990988926973449`.
+  - `F1@3=0.6715447154471544`.
+  - `incomplete_rate=0.0`.
+- Artefacto: `resultados_benchmark_oficial_prueba_aprobado.json`.
+- Suite: `15/15` pruebas OK.
+
+Reranker sigue fuera del baseline congelado.
+
+### Integración reranker experimental
+
+- `recuperar/recuperar.py`: reranker opcional `CrossEncoder`, aplicado sobre pool híbrido de 60 candidatos.
+- `benchmark_rag.py`: flags `--reranker-model` y `--limit` para piloto.
+- Default sin reranker; baseline no cambia.
+- Modelo probado: `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`.
+- Ejecución bloqueada: cache local incompleto y HF Hub sin resolución DNS; `OSError: Can't load the model`.
+- No se generaron métricas reranker.
+
+Comando posterior, con modelo descargado localmente o red disponible:
+
+```bash
+venv/bin/python benchmark_rag.py \
+  --dataset context/benchmark_rag_oficial_prueba.jsonl \
+  --faiss-dir base_vectorial/encoder_multilingual-e5-large-instruct-prueba \
+  --fusion-method combsum \
+  --normalization-method minmax \
+  --alpha 0.1 \
+  --reranker-model cross-encoder/mmarco-mMiniLMv2-L12-H384-v1 \
+  --output resultados_benchmark_oficial_prueba_reranker.json
+```
+
+### Reintento reranker con red estable
+
+- Modelo descargado correctamente.
+- Benchmark completo no terminó en 15 minutos CPU; no produjo artefacto final.
+- Piloto de 5 consultas:
+  - Reranker `NDCG@10=0.6782512539372233`.
+  - Reranker `F1@3=0.5`.
+  - `incomplete_rate=0.0`.
+- Baseline mismo piloto:
+  - `NDCG@10=0.7094399005672691`.
+  - `F1@3=0.5`.
+- Delta piloto reranker-baseline: NDCG `-0.0311886469000458`, F1 `0.0`.
+- Artefactos: `resultados_benchmark_oficial_prueba_reranker_piloto.json`, `resultados_benchmark_oficial_prueba_baseline_piloto.json`.
+- Decisión: no promover reranker; baseline oficial permanece congelado.
