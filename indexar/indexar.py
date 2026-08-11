@@ -148,6 +148,15 @@ def indexar(fragmentos: List[dict], faiss_dir: str = BASE_VECTORIAL_DIR) -> None
     logger.info("Generando embeddings para %d fragmentos…", len(textos))
 
     device = _detectar_device()
+    if device == "cpu":
+        try:
+            import os, torch
+            cpus = os.cpu_count() or 4
+            torch.set_num_threads(cpus)
+            logger.info("Optimizado PyTorch para usar %d hilos de CPU", cpus)
+        except Exception:
+            pass
+
     embeddings_model = HuggingFaceEmbeddings(
         model_name=MODELO_EMBEDDINGS,
         model_kwargs={"device": device},
@@ -157,14 +166,21 @@ def indexar(fragmentos: List[dict], faiss_dir: str = BASE_VECTORIAL_DIR) -> None
         },
     )
 
-    # Generar vectores de embeddings (con barra de progreso en terminal)
-    vectors_np = embeddings_model._client.encode(
-        textos,
-        normalize_embeddings=True,
-        batch_size=32,
-        show_progress_bar=True,
-        convert_to_numpy=True,
-    )
+    # Generar vectores de embeddings con barra de progreso explícita tqdm lote por lote
+    from tqdm import tqdm
+    batch_size = 32
+    vectors_list = []
+    for i in tqdm(range(0, len(textos), batch_size), desc="Etapa 3: Generando embeddings FAISS", unit="lote"):
+        lote = textos[i : i + batch_size]
+        vecs = embeddings_model._client.encode(
+            lote,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+            convert_to_numpy=True,
+        )
+        vectors_list.append(vecs)
+
+    vectors_np = np.vstack(vectors_list)
 
     # Crear índice FAISS (Inner Product ≡ coseno con vectores normalizados)
     dimension = vectors_np.shape[1]

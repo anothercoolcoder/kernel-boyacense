@@ -95,6 +95,7 @@ def main() -> None:
 
     # ── Etapa 1: Extracción ───────────────────────────────────────────────── #
     from extraccion.extraccion import extraer_documento, ErrorExtraccion
+    from tqdm import tqdm
 
     archivos = _descubrir_archivos(corpus)
     if not archivos:
@@ -104,7 +105,9 @@ def main() -> None:
     logger.info("Archivos encontrados: %d", len(archivos))
 
     registros: list[dict] = []
-    for ruta in archivos:
+    pbar = tqdm(archivos, desc="Etapa 1: Extrayendo documentos", unit="doc")
+    for ruta in pbar:
+        pbar.set_postfix_str(ruta.name[:25])
         try:
             metadata_oficial = resolver_archivo(ruta, inventario, RAIZ_CORPUS_OFICIAL)
             nuevos = extraer_documento(ruta, metadata_oficial=metadata_oficial)
