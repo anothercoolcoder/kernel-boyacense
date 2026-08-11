@@ -767,3 +767,82 @@ venv/bin/python benchmark_rag.py \
 - Delta piloto reranker-baseline: NDCG `-0.0311886469000458`, F1 `0.0`.
 - Artefactos: `resultados_benchmark_oficial_prueba_reranker_piloto.json`, `resultados_benchmark_oficial_prueba_baseline_piloto.json`.
 - Decisión: no promover reranker; baseline oficial permanece congelado.
+
+## 2026-08-11 - Recuperación durable del pipeline documental
+
+### Causa corregida
+
+- `resolver_archivo()` lanzaba `ValueError` sin aislamiento; un nombre oficial
+  ambiguo (como CSET, con seis carpetas legítimas) detenía todo el lote.
+- `OCR on page.number=17/18` se mantiene como diagnóstico de la dependencia;
+  no se trata como comando ni como excepción. `bash: OCR: orden no encontrada`
+  es consecuencia de pegar ese log en la terminal, no del pipeline.
+- El PDF abría PyMuPDF nuevamente por cada página OCR; ahora reutiliza un handle
+  por documento, valida rango y registra páginas OCR sin texto.
+
+### Implementado
+
+- `main.py`: aislamiento por documento, estados `running/ok/error/obsolete`,
+  resumen, señales SIGINT/SIGTERM, `--checkpoint`, `--resume`, `--dry-run` y
+  compatibilidad con `--faiss-dir`.
+- `main.py`: checkpoint JSONL append-only y archivo hermano de registros,
+  ambos con `flush` + `fsync`; se ignora una última línea truncada. El `ok` se
+  confirma solo después de persistir registros.
+- `lib/inventario_oficial.py`: resolución por ruta completa o sufijo de carpeta;
+  ambigüedad conserva candidatos y nunca inventa `DOC_ID`.
+- `extraccion/extraccion.py`: handle PyMuPDF reutilizado, cierre garantizado,
+  página fuera de rango y fallo OCR por página observables.
+- `indexar/indexar.py`: chunk IDs deterministas preservados y escritura en
+  temporales con rename atómico; una falla de embeddings no elimina extracción.
+
+### Operación
+
+```bash
+python main.py corpus_adl --checkpoint estado.jsonl
+python main.py corpus_adl --resume --checkpoint estado.jsonl
+python main.py corpus_adl --dry-run --checkpoint estado.jsonl
+```
+
+Para reinicio intencional, conserve el estado como evidencia y use un nombre
+de checkpoint nuevo; no se sobrescribe uno existente por defecto. Para limpiar
+un job terminado, elimine juntos `estado.jsonl` y
+`estado.jsonl.records.jsonl`. Errores quedan reintentables con `--resume`.
+
+### Verificación
+
+- Compilación de módulos prioritarios y pruebas de recuperación, ambigüedad,
+  truncamiento, modificación e idempotencia agregadas/ejecutadas en la fase.
+- No se modificaron ni eliminaron artefactos no relacionados del árbol sucio.
+
+### Verificación ejecutada en esta sesión
+
+- `python -m py_compile main.py lib/inventario_oficial.py extraccion/extraccion.py extraccion/fragmentacion.py indexar/indexar.py`: OK.
+- `python -m unittest discover -s test -v`: `21` pruebas OK.
+- `git diff --check`: OK.
+- Recuperación simulada: estado `running`, línea JSONL truncada y archivo
+  modificado se detectan como no reutilizables; pruebas OK.
+- Dry-run sobre `corpus_adl`: comenzó con `12` documentos y quedó en el primer
+  PDF lento al vencer el límite externo de `120s`; quedó `running`, sin `ok`,
+  y el checkpoint se conservó. Debe reanudarse con `--resume`.
+- Medición simple de persistencia: 20 escrituras con `fsync` en `0.0016s` en
+  este entorno; el coste real depende del disco y del tamaño de los registros.
+
+## 2026-08-11 - Corrección de sombreado de `os` en publicación FAISS
+
+- `indexar/indexar.py`: se eliminó `import os` local dentro de `indexar()`.
+  Ese sombreado hacía que `os.fsync()` lanzara `UnboundLocalError` después de
+  generar correctamente los 2317 registros de metadata.
+- La importación global de `os` se usa ahora tanto para `cpu_count()` como para
+  `fsync()`.
+- Verificación: compilación prioritaria, `21` pruebas unittest y `git diff --check` OK.
+
+## 2026-08-11 - `--resume` exige checkpoint existente
+
+- Se detectó que `estado.jsonl` era un job nuevo, mientras la corrida previa
+  estaba en `estado_pipeline.jsonl`; por eso el arranque indicó `recuperados=0`.
+- `main.py`: `--resume` ya no crea silenciosamente un checkpoint inexistente;
+  devuelve un error explícito para evitar reprocesamientos accidentales.
+- `estado_pipeline.jsonl` fue inspeccionado: contiene `12` estados `ok` y `12`
+  archivos de registros reutilizables.
+- Prueba nueva de checkpoint inexistente con `--resume`; suite focalizada de
+  recuperación: `7` pruebas OK.

@@ -97,6 +97,23 @@ python main.py --dry-run
 python main.py ruta/a/tu_corpus --dry-run
 ```
 
+#### D. Checkpoint y reanudación segura
+
+Cada documento se confirma en un checkpoint JSONL solo después de guardar sus
+registros. Un documento `running`, `error` o cuyo archivo cambió se procesa de
+nuevo; los documentos `ok` completos no se duplican:
+
+```bash
+python main.py corpus_adl --checkpoint estado.jsonl
+python main.py corpus_adl --resume --checkpoint estado.jsonl
+python main.py corpus_adl --dry-run --checkpoint estado_validacion.jsonl
+```
+
+El checkpoint existente no se sobrescribe sin `--resume`. Para reiniciar un
+job deliberadamente use otro nombre, o elimine el checkpoint y su archivo
+hermano `estado.jsonl.records.jsonl` después de conservarlos como evidencia.
+Si embeddings o FAISS fallan, la extracción queda persistida para reanudarla.
+
 ---
 
 ## Visualizador Web Interactivo (`visualizador_faiss.py`)

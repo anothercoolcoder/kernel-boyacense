@@ -355,7 +355,7 @@ def _limpiar_texto(texto: str, pdf: bool = False) -> str:
     return "\n".join(salida).strip()
 
 
-def _limpiar_boilerplate_pdf(registros: List[Registro]) -> List[Registro]:
+def _limpiar_boilerplate_pdf(registros: List[Registro], conservar_vacios: bool = False) -> List[Registro]:
     """Elimina cabeceras/pies repetidos solo en los márgenes de las páginas."""
     if len(registros) < 2:
         return registros
@@ -391,7 +391,7 @@ def _limpiar_boilerplate_pdf(registros: List[Registro]) -> List[Registro]:
         eliminadas = len(lineas) - len(filtradas)
         registro["texto"] = _limpiar_texto("\n".join(filtradas), pdf=True)
         registro["metadata"]["boilerplate_lineas_eliminadas"] = eliminadas
-    return _utiles(registros)
+    return registros if conservar_vacios else _utiles(registros)
 
 
 def _utiles(registros: Iterable[Registro]) -> List[Registro]:
@@ -556,35 +556,41 @@ def extraer_pdf(ruta: Path) -> List[Registro]:
         logger.warning("pymupdf4llm falló en %s, usando pymupdf puro: %s", ruta.name, exc)
         paginas = []
 
-    crudos = _texto_crudo_pdf(ruta)
-    
-    if not paginas and not crudos:
-        raise ErrorExtraccion(f"PDF ilegible {ruta}")
+    try:
+        import pymupdf
+        doc = pymupdf.open(str(ruta))
+    except ImportError:
+        doc = None
+    except Exception as exc:
+        raise ErrorExtraccion(f"PDF ilegible {ruta}: {exc}") from exc
 
-    registros: List[Registro] = []
-    num_pages = max(len(paginas), len(crudos))
-    for indice in range(1, num_pages + 1):
-        if paginas and indice <= len(paginas):
-            texto = str(paginas[indice - 1].get("text", "")).strip()
-        else:
-            texto = ""
-            
-        metadata: Dict[str, Any] = {"origen_texto": "nativo", "total_paginas": num_pages}
-        crudo = crudos[indice - 1] if indice <= len(crudos) else ""
-        
-        if not paginas or _retencion(crudo, texto) < UMBRAL_RETENCION_MD:
-            texto = crudo
-            metadata["origen_texto"] = "nativo_plano"
-            
-        if not texto:
-            texto, confianza = _ocr_pagina_pdf(ruta, indice - 1)
-            metadata.update(origen_texto="ocr", confianza=round(confianza, 4))
-            
-        registros.append(_registro(ruta, "pdf", indice, texto, metadata))
+    try:
+        crudos = _texto_crudo_pdf(ruta, doc)
+        if not paginas and not crudos:
+            raise ErrorExtraccion(f"PDF ilegible {ruta}")
 
-    registros = _limpiar_boilerplate_pdf(registros)
-    logger.info("PDF %s: %d páginas con texto", ruta.name, len(registros))
-    return registros
+        registros: List[Registro] = []
+        num_pages = max(len(paginas), len(crudos), len(doc) if doc is not None else 0)
+        for indice in range(1, num_pages + 1):
+            texto = str(paginas[indice - 1].get("text", "")).strip() if paginas and indice <= len(paginas) else ""
+            metadata: Dict[str, Any] = {"origen_texto": "nativo", "total_paginas": num_pages}
+            crudo = crudos[indice - 1] if indice <= len(crudos) else ""
+            if not paginas or _retencion(crudo, texto) < UMBRAL_RETENCION_MD:
+                texto = crudo
+                metadata["origen_texto"] = "nativo_plano"
+            if not texto:
+                texto, confianza = _ocr_pagina_pdf(ruta, indice - 1, doc=doc)
+                metadata.update(origen_texto="ocr", confianza=round(confianza, 4))
+                if not texto:
+                    metadata["error_ocr"] = "sin_texto_reconocido"
+            registros.append(_registro(ruta, "pdf", indice, texto, metadata))
+
+        registros = _limpiar_boilerplate_pdf(registros, conservar_vacios=True)
+        logger.info("PDF %s: %d páginas procesadas, %d con texto", ruta.name, num_pages, sum(bool(r["texto"].strip()) for r in registros))
+        return registros
+    finally:
+        if doc is not None:
+            doc.close()
 
 
 _SIN_MARCADO = str.maketrans("", "", "*_#`|")
@@ -617,21 +623,23 @@ def _normalizar_texto_pdf(texto: str) -> str:
     return texto
 
 
-def _texto_crudo_pdf(ruta: Path) -> List[str]:
+def _texto_crudo_pdf(ruta: Path, doc: Any = None) -> List[str]:
     """Texto plano por página vía PyMuPDF. Lista vacía si PyMuPDF no está."""
     try:
         import pymupdf
     except ImportError:
         return []
     try:
-        with pymupdf.open(str(ruta)) as doc:
+        if doc is not None:
             return [_normalizar_texto_pdf(p.get_text()).strip() for p in doc]
+        with pymupdf.open(str(ruta)) as abierto:
+            return [_normalizar_texto_pdf(p.get_text()).strip() for p in abierto]
     except Exception as exc:
         logger.warning("Texto plano falló en %s: %s", ruta.name, exc)
         return []
 
 
-def _ocr_pagina_pdf(ruta: Path, indice_pagina: int, dpi: int = 300) -> tuple[str, float]:
+def _ocr_pagina_pdf(ruta: Path, indice_pagina: int, dpi: int = 300, doc: Any = None) -> tuple[str, float]:
     """Rasteriza una página y le aplica OCR. Devuelve ``(texto, confianza)``."""
     try:
         import numpy as np
@@ -641,12 +649,24 @@ def _ocr_pagina_pdf(ruta: Path, indice_pagina: int, dpi: int = 300) -> tuple[str
         return "", 0.0
 
     try:
-        with pymupdf.open(str(ruta)) as doc:
-            pix = doc[indice_pagina].get_pixmap(dpi=dpi)
+        abierto = doc
+        cerrar = False
+        if abierto is None:
+            abierto = pymupdf.open(str(ruta))
+            cerrar = True
+        try:
+            if indice_pagina < 0 or indice_pagina >= len(abierto):
+                raise IndexError(f"página fuera de rango: {indice_pagina + 1}/{len(abierto)}")
+            pix = abierto[indice_pagina].get_pixmap(dpi=dpi, alpha=False)
             arreglo = np.frombuffer(pix.samples, dtype=np.uint8).reshape(
                 pix.height, pix.width, pix.n
             )
-        return _ocr(arreglo[:, :, :3])
+            resultado = _ocr(arreglo[:, :, :3])
+            pix = None
+            return resultado
+        finally:
+            if cerrar:
+                abierto.close()
     except Exception as exc:
         logger.warning("OCR falló en %s p.%d: %s", ruta.name, indice_pagina + 1, exc)
         return "", 0.0

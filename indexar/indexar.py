@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import tempfile
 from pathlib import Path
 from typing import List
 
@@ -150,7 +152,7 @@ def indexar(fragmentos: List[dict], faiss_dir: str = BASE_VECTORIAL_DIR) -> None
     device = _detectar_device()
     if device == "cpu":
         try:
-            import os, torch
+            import torch
             cpus = os.cpu_count() or 4
             torch.set_num_threads(cpus)
             logger.info("Optimizado PyTorch para usar %d hilos de CPU", cpus)
@@ -187,17 +189,21 @@ def indexar(fragmentos: List[dict], faiss_dir: str = BASE_VECTORIAL_DIR) -> None
     index = faiss.IndexFlatIP(dimension)
     index.add(vectors_np)
 
-    # FAISS IndexFlatIP asigna IDs internos ordinales desde cero.
-    for indice, meta in enumerate(metadatos):
-        meta["chunk_id"] = str(indice)
-
-    # Persistir índice FAISS puro
+    # chunk_id pertenece al contrato documental y ya es determinista desde
+    # fragmentación. El ordinal FAISS es interno y no debe sobrescribirlo.
     faiss_path = out_dir / "index.faiss"
-    faiss.write_index(index, str(faiss_path))
-    logger.info("Índice FAISS guardado: %s (%d vectores, dim=%d)", faiss_path, index.ntotal, dimension)
-
-    # Persistir metadata JSONL
-    _escribir_metadata_jsonl(metadatos, out_dir / "metadata.jsonl")
+    metadata_path = out_dir / "metadata.jsonl"
+    with tempfile.TemporaryDirectory(prefix=".index-build-", dir=out_dir) as temporal:
+        faiss_tmp = Path(temporal) / "index.faiss"
+        metadata_tmp = Path(temporal) / "metadata.jsonl"
+        faiss.write_index(index, str(faiss_tmp))
+        _escribir_metadata_jsonl(metadatos, metadata_tmp)
+        for temporal_path in (faiss_tmp, metadata_tmp):
+            with temporal_path.open("rb") as archivo:
+                os.fsync(archivo.fileno())
+        os.replace(faiss_tmp, faiss_path)
+        os.replace(metadata_tmp, metadata_path)
+    logger.info("Índice FAISS guardado atómicamente: %s (%d vectores, dim=%d)", faiss_path, index.ntotal, dimension)
 
     print(f"Indexación FAISS completada. Guardado en: '{faiss_dir}'")
     print(f"  -> index.faiss: {index.ntotal} vectores (dim={dimension})")
