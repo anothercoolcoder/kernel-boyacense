@@ -34,15 +34,16 @@ BASE_VECTORIAL_DIR = f"./base_vectorial/encoder_{ENCODER_NAME}"
 
 
 def _detectar_device() -> str:
-    """Devuelve 'cuda' si hay GPU disponible, 'cpu' en caso contrario."""
+    """Devuelve 'cuda' si hay GPU NVIDIA disponible, 'cpu' en caso contrario."""
     try:
         import torch
         if torch.cuda.is_available():
-            logger.info("GPU detectada — usando CUDA para embeddings.")
+            logger.info("GPU NVIDIA detectada — usando CUDA para embeddings.")
             return "cuda"
     except ImportError:
         pass
-    logger.info("Sin GPU disponible — usando CPU para embeddings.")
+
+    logger.info("Sin GPU CUDA disponible — usando CPU para embeddings.")
     return "cpu"
 
 

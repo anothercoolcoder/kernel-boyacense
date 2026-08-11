@@ -1,0 +1,809 @@
+{
+  "fecha": "2026-08-09T10:48:03.291326",
+  "estrategia": "BuscadorHibrido.buscar",
+  "top_k_docs": 3,
+  "k": 5,
+  "total_preguntas": 8,
+  "preguntas": [
+    {
+      "id": 1,
+      "pregunta": "¿Quiénes son las instituciones que elaboraron conjuntamente este boletim del Painel El Niño 2026-2027?",
+      "documents": [
+        {
+          "rank": 1,
+          "doc_id": "DOC-0006"
+        },
+        {
+          "rank": 2,
+          "doc_id": "DOC-0007"
+        },
+        {
+          "rank": 3,
+          "doc_id": "DOC-0003"
+        }
+      ],
+      "fragments": [
+        {
+          "rank": 1,
+          "chunk_id": "DOC-0006-chunk-002",
+          "doc_id": "DOC-0006",
+          "text": "**PAINEL EL NIÑO 2026-2027** - Boletim Mensal N° 01 - Junho de 2026: Este boletim é o resultado de ação conjunta entre o Instituto Nacional de Pesquisas Espaciais (INPE), o Instituto Nacional de Meteorologia (INMET), a Agência Nacional de Águas e Saneamento Básico (ANA), o Centro Nacional de Monitoramento e Alerta de Desastres Naturais (CEMADEN), o Serviço Geológico do Brasil (SGB) e a Secretaria Nacional de Proteção e Defesa Civil (SEDEC), com o objetivo de apresentar o monitoramento e previsões sobre o fenômeno El Niño em 2026 e 2027, bem como informar sobre possíveis impactos. Em junho de 2026 foi confirmada a configuração do El Niño. Os modelos indicam probabilidade acima de 90% de permanência do fenômeno até, pelo menos o início de 2027, com alta probabilidade de ocorrência de um El Niño muito forte, quando as anomalias/desvios de temperatura da superfície do mar (TSM) no Oceano Pacífico Equatorial ficam acima de 2,0°C, entre a primavera e o verão de 2026. Com isso, a previsão climática para o trimestre julho-agosto-setembro de 2026 indica, de forma geral, chuvas acima da média em áreas da Região Sul do Sul e, chuvas abaixo da média no centro-norte do País. Diante desse cenário, a colheita do milho segunda safra, algodão e cana-deaçúcar na Região Centro-Oeste e as culturas de inverno na Região Sul podem ser beneficiadas.",
+          "score_fusion": 0.7281374591871893,
+          "score_bm25_raw": 32.22501754760742,
+          "score_faiss_raw": 0.8504387736320496,
+          "score_bm25_normalized": 1.0,
+          "score_faiss_normalized": 0.45627491837437856,
+          "rank_bm25": 1,
+          "rank_faiss": 10,
+          "fuente": "INPE_painelelniojunho26.pdf",
+          "num_tokens": 358,
+          "padding": false
+        },
+        {
+          "rank": 2,
+          "chunk_id": "DOC-0007-chunk-041",
+          "doc_id": "DOC-0007",
+          "text": "> 40 Consejería Presidencial para los Derechos Humanos y Derecho Internacional Humanitario (2025) \"Informe Periódico - Secretario General Ante El Consejo Permanente de la Organización de los Estados Americanos (OEA)\", p. 1-5. > 41 Instituto Colombiano de Bienestar Familiar (2025) “Informe Periódico 39 – Misión de Apoyo al Proceso de Paz en Colombia – Organización de Estados Americanos (MAPP-OEA) Informe de Avances, Logros y Resultados del ICBF Período por Reportar: 01 de enero al 30 de junio de 2025”",
+          "score_fusion": 0.5,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.866240918636322,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 1.0,
+          "rank_bm25": null,
+          "rank_faiss": 1,
+          "fuente": "MAPPOEA_cp-informe-mappoea-39-esp.pdf",
+          "num_tokens": 128,
+          "padding": false
+        },
+        {
+          "rank": 3,
+          "chunk_id": "DOC-0007-chunk-086",
+          "doc_id": "DOC-0007",
+          "text": "Principales avances y logros de la Unidad de Implementación del Acuerdo de Paz”, p.15. > 87 El Informe fue presentado el 20 de agosto de 2025 por la Comisión de Seguimiento y Monitoreo a la Ley de Víctimas y Restitución de Tierras, compuesta por la Procuraduría General de la Nación, la Defensoría del Pueblo, la Contraloría General de la Nación y tres representantes de las víctimas. Disponible en: https://www.youtube.com/watch?v=Nk_M4VRXjXc 88 Comisión de Seguimiento y Monitoreo a la Implementación de la Ley 1448 de 2011 (2025). “Décimo Segundo Informe de Seguimiento al Congreso de la República 2024-2025”, p. 377. Disponible en: https://acortar.link/zTFnIc > 89 _Ibidem_ , p.116. > 90 _Ibidem_ , p.113-114.",
+          "score_fusion": 0.43175134128533693,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8622739315032959,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 0.8635026825706739,
+          "rank_bm25": null,
+          "rank_faiss": 2,
+          "fuente": "MAPPOEA_cp-informe-mappoea-39-esp.pdf",
+          "num_tokens": 216,
+          "padding": false
+        },
+        {
+          "rank": 4,
+          "chunk_id": "DOC-0007-chunk-040",
+          "doc_id": "DOC-0007",
+          "text": "El Instituto Colombiano de Bienestar Familiar (ICBF) continuó con la implementación de las estrategias Atrapasueños y Cuidado Mutuo, así como del Programa de Atención Especializada para el Restablecimiento de Derechos, con los que fortaleció entornos protectores familiares y comunitarios, atendió a la infancia y adolescencia en las crisis humanitarias, y buscó garantizar su protección y reconocimiento como sujetos de derecho41 . Además, mediante la implementación de la Modalidad de Fortalecimiento Familiar y Comunitario, el ICBF acompaña a las familias y comunidades como sujetos colectivos de derechos, fortaleciendo sus vínculos, capacidades de agencia y estrategias de afrontamiento, cuidado e incidencia en sus proyectos de vida para el buen vivir, la reparación del tejido social, la generación de sistemas de cuidado comunitario y la construcción de paz. > 39 Ministerio del Interior (2025). “Respuesta de Ministerio del Interior. Avances, logros y resultados: Informe Semestral 39Informe Periódico que el Secretario General presenta ante el Consejo Permanente de la Organización de los Estados Americanos (OEA). Secretaría Técnica de la CIPRAT 14 de enero – junio 30 de 2025”, p. 3 > 40 Consejería Presidencial para los Derechos Humanos y Derecho Internacional Humanitario (2025) \"Informe Periódico - Secretario General Ante El Consejo Permanente de la Organización de los Estados Americanos (OEA)\", p. 1-5.",
+          "score_fusion": 0.3433054685064562,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8571329712867737,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 0.6866109370129124,
+          "rank_bm25": null,
+          "rank_faiss": 3,
+          "fuente": "MAPPOEA_cp-informe-mappoea-39-esp.pdf",
+          "num_tokens": 315,
+          "padding": false
+        },
+        {
+          "rank": 5,
+          "chunk_id": "DOC-0007-chunk-039",
+          "doc_id": "DOC-0007",
+          "text": "**2.2. Reclutamiento, uso y utilización de niños, niñas y adolescentes**: La CIPRAT articuló entidades nacionales para construir rutas integrales de prevención, fortalecer redes de protección y articular acciones de judicialización en Antioquia, Cauca, Chocó, Nariño, Norte de Santander y Valle del Cauca por la recurrencia de escenarios de riesgos para niños, niñas y adolescentes39 . En el marco de la estrategia de Escuelas Territorios de Vida, la Comisión Intersectorial para la Prevención de Reclutamiento Uso y Utilización y Violencia Sexual de Niños, Niñas y Adolescentes (CIPRUNA), focalizó instituciones educativas en Cauca, Guaviare, Nariño, Norte de Santander, Putumayo y Valle del Cauca en el marco de la Estrategia Escuelas Territorio de Vida Seguras. Además, desarrolló diálogos territoriales para construir un modelo de fortalecimiento de entornos protectores, avanzó en el diseño de la Estrategia Nacional de Prevención y brindó asistencia técnica a los Equipos de Acción Inmediata40 . El Instituto Colombiano de Bienestar Familiar (ICBF) continuó con la implementación de las estrategias Atrapasueños y Cuidado Mutuo, así como del Programa de Atención Especializada para el Restablecimiento de Derechos, con los que fortaleció entornos protectores familiares y comunitarios, atendió a la infancia y adolescencia en las crisis humanitarias, y buscó garantizar su protección y reconocimiento como sujetos de derecho41 .",
+          "score_fusion": 0.307659887775025,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8550610542297363,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 0.61531977555005,
+          "rank_bm25": null,
+          "rank_faiss": 4,
+          "fuente": "MAPPOEA_cp-informe-mappoea-39-esp.pdf",
+          "num_tokens": 341,
+          "padding": false
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "pregunta": "¿En qué mes y año se publicó el Boletim Mensal Nº 01?",
+      "documents": [
+        {
+          "rank": 1,
+          "doc_id": "DOC-0006"
+        },
+        {
+          "rank": 2,
+          "doc_id": "DOC-0007"
+        },
+        {
+          "rank": 3,
+          "doc_id": "DOC-0003"
+        }
+      ],
+      "fragments": [
+        {
+          "rank": 1,
+          "chunk_id": "DOC-0006-chunk-002",
+          "doc_id": "DOC-0006",
+          "text": "**PAINEL EL NIÑO 2026-2027** - Boletim Mensal N° 01 - Junho de 2026: Este boletim é o resultado de ação conjunta entre o Instituto Nacional de Pesquisas Espaciais (INPE), o Instituto Nacional de Meteorologia (INMET), a Agência Nacional de Águas e Saneamento Básico (ANA), o Centro Nacional de Monitoramento e Alerta de Desastres Naturais (CEMADEN), o Serviço Geológico do Brasil (SGB) e a Secretaria Nacional de Proteção e Defesa Civil (SEDEC), com o objetivo de apresentar o monitoramento e previsões sobre o fenômeno El Niño em 2026 e 2027, bem como informar sobre possíveis impactos. Em junho de 2026 foi confirmada a configuração do El Niño. Os modelos indicam probabilidade acima de 90% de permanência do fenômeno até, pelo menos o início de 2027, com alta probabilidade de ocorrência de um El Niño muito forte, quando as anomalias/desvios de temperatura da superfície do mar (TSM) no Oceano Pacífico Equatorial ficam acima de 2,0°C, entre a primavera e o verão de 2026. Com isso, a previsão climática para o trimestre julho-agosto-setembro de 2026 indica, de forma geral, chuvas acima da média em áreas da Região Sul do Sul e, chuvas abaixo da média no centro-norte do País. Diante desse cenário, a colheita do milho segunda safra, algodão e cana-deaçúcar na Região Centro-Oeste e as culturas de inverno na Região Sul podem ser beneficiadas.",
+          "score_fusion": 0.5,
+          "score_bm25_raw": 18.964641571044922,
+          "score_faiss_raw": 0.0,
+          "score_bm25_normalized": 1.0,
+          "score_faiss_normalized": 0.0,
+          "rank_bm25": 1,
+          "rank_faiss": null,
+          "fuente": "INPE_painelelniojunho26.pdf",
+          "num_tokens": 358,
+          "padding": false
+        },
+        {
+          "rank": 2,
+          "chunk_id": "DOC-0007-chunk-041",
+          "doc_id": "DOC-0007",
+          "text": "> 40 Consejería Presidencial para los Derechos Humanos y Derecho Internacional Humanitario (2025) \"Informe Periódico - Secretario General Ante El Consejo Permanente de la Organización de los Estados Americanos (OEA)\", p. 1-5. > 41 Instituto Colombiano de Bienestar Familiar (2025) “Informe Periódico 39 – Misión de Apoyo al Proceso de Paz en Colombia – Organización de Estados Americanos (MAPP-OEA) Informe de Avances, Logros y Resultados del ICBF Período por Reportar: 01 de enero al 30 de junio de 2025”",
+          "score_fusion": 0.5,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8342375755310059,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 1.0,
+          "rank_bm25": null,
+          "rank_faiss": 1,
+          "fuente": "MAPPOEA_cp-informe-mappoea-39-esp.pdf",
+          "num_tokens": 128,
+          "padding": false
+        },
+        {
+          "rank": 3,
+          "chunk_id": "DOC-0003-chunk-478",
+          "doc_id": "DOC-0003",
+          "text": "**c) Subindicadores del indicador de IA Generativa**: Para la construcción de los nuevos subindicadores del indicador de IA Generativa, se utiliza como fuente la base de datos otorgados por Sensor Tower, los cuales no son de carácter público. Para la elaboración de estos subindicadores, se utilizó la información correspondiente a diciembre de 2024, debido a que el valor acumulado a esa fecha es más representativo de un número de usuarios que ha crecido de forma exponencial en los últimos años. De esta manera, el valor al último mes de cada año refleja de mejor manera el comportamiento del total de usuarios de cada aplicación en los distintos países.",
+          "score_fusion": 0.4779369267005437,
+          "score_bm25_raw": 16.58797264099121,
+          "score_faiss_raw": 0.8030433654785156,
+          "score_bm25_normalized": 0.7734848791955349,
+          "score_faiss_normalized": 0.18238897420555258,
+          "rank_bm25": 2,
+          "rank_faiss": 31,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 140,
+          "padding": false
+        },
+        {
+          "rank": 4,
+          "chunk_id": "DOC-0007-chunk-082",
+          "doc_id": "DOC-0007",
+          "text": "> 81 Cifra anunciada en febrero por la Policía Nacional y reafirmada en abril por el Ministerio de Justicia y del Derecho. Disponible en: https://lc.cx/85I_37 y https://lc.cx/8Nbh3M > 82 La cantidad de hectáreas de hoja de coca erradicadas manualmente en el primer semestre de 2024 fue de 2.183 y la cantidad de toneladas de clorhidrato de cocaína incautadas en el primer semestre de 2024 fue de 441. Ministerio de Defensa Nacional (2025). “Seguimiento a indicadores de seguridad y resultados operacionales. Junio 2025”, pp.43-44.",
+          "score_fusion": 0.3817971907470563,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8252180218696594,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 0.7635943814941126,
+          "rank_bm25": null,
+          "rank_faiss": 2,
+          "fuente": "MAPPOEA_cp-informe-mappoea-39-esp.pdf",
+          "num_tokens": 138,
+          "padding": false
+        },
+        {
+          "rank": 5,
+          "chunk_id": "DOC-0003-chunk-531",
+          "doc_id": "DOC-0003",
+          "text": "Este segundo prompt fue formulado del siguiente modo: _Necesito ejemplos de iniciativas en (país) —públicas o privadas— donde la inteligencia artificial se usa, no sólo para contestar preguntas, sino para procesar, clasificar, resumir o anonimizar los insumos que la ciudadanía envía (encuestas, diálogos, quejas, opiniones o contenidos)._ _Excluye chatbots que sólo entregan información sin analizar los datos ciudadanos. Por cada caso indica: país, nombre de la iniciativa, año de inicio, estado (activo/cerrado), técnica o modelo de IA empleado y breve explicación de qué dato ciudadano se analiza y para qué._ **228**",
+          "score_fusion": 0.3540231434410889,
+          "score_bm25_raw": 15.90137004852295,
+          "score_faiss_raw": 0.0,
+          "score_bm25_normalized": 0.7080462868821779,
+          "score_faiss_normalized": 0.0,
+          "rank_bm25": 3,
+          "rank_faiss": null,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 151,
+          "padding": false
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "pregunta": "¿Qué fenómeno climático se confirmó en junio de 2026 según el documento?",
+      "documents": [
+        {
+          "rank": 1,
+          "doc_id": "DOC-0005"
+        },
+        {
+          "rank": 2,
+          "doc_id": "DOC-0003"
+        },
+        {
+          "rank": 3,
+          "doc_id": "DOC-0004"
+        }
+      ],
+      "fragments": [
+        {
+          "rank": 1,
+          "chunk_id": "DOC-0005-chunk-025",
+          "doc_id": "DOC-0005",
+          "text": "**CONCLUSÃO**: De acordo com as análises diagnósticas e prognósticas, conclui-se que, no segundo semestre de 2026, existe alta probabilidade de um evento de El Niño se estabelecer. Embora a intensidade do evento ainda não possa ser definida, há probabilidade de que o evento possa atingir, pelo menos, intensidade moderada. Esse padrão tende a favorecer a ocorrência de déficit de precipitação na Amazônia, especialmente em sua porção leste, e de volumes acima da média na Região Sul do Brasil. Ressalta-se que os impactos associados ao fenômeno poderão variar em intensidade e distribuição espacial, em função da interação com outros sistemas climáticos, como as condições do Atlântico Tropical, bem como da variabilidade natural do sistema climático. Nesse contexto, reforça-se a importância do monitoramento contínuo das condições oceânicas e atmosféricas, visando subsidiar ações de planejamento, mitigação e resposta frente aos possíveis impactos identificados. Em relação a ocorrência de eventos extremos, como tempestades, enchentes, tempo seco e etc, reforça-se a importância de acompanhar as previsões em escalas subsazonal e de tempo, disponíveis nos canais de divulgação das instituições participantes deste boletim. Por fim, esclarece-se que as informações apresentadas neste documento refletem as condições observadas e as previsões climáticas disponíveis até abril de 2026.",
+          "score_fusion": 0.8356240133989282,
+          "score_bm25_raw": 16.14438819885254,
+          "score_faiss_raw": 0.8575350046157837,
+          "score_bm25_normalized": 0.7007483546193771,
+          "score_faiss_normalized": 0.9704996721784793,
+          "rank_bm25": 6,
+          "rank_faiss": 2,
+          "fuente": "INPE_notatecnicaconjuntaelnino2026-inpeinmetfuncemecensipam.pdf",
+          "num_tokens": 314,
+          "padding": false
+        },
+        {
+          "rank": 2,
+          "chunk_id": "DOC-0003-chunk-199",
+          "doc_id": "DOC-0003",
+          "text": "**a) Agenda Legislativa en materia de Inteligencia Artificial**: Ecuador no cuenta con una ley específica en materia de inteligencia artificial. No obstante, en diciembre de 2024 se presentó un proyecto borrador para una política nacional de IA, la que ha recibido comentarios y se encuentra actualmente en proceso de revisión y elaboración de un nuevo documento. Del mismo modo, existen otras iniciativas legislativas presentadas en el Legislativo, según lo informado por la Dirección de Fomento de Tecnologías Emergentes de Ecuador. **88**",
+          "score_fusion": 0.5,
+          "score_bm25_raw": 18.25152587890625,
+          "score_faiss_raw": 0.0,
+          "score_bm25_normalized": 1.0,
+          "score_faiss_normalized": 0.0,
+          "rank_bm25": 1,
+          "rank_faiss": null,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 107,
+          "padding": false
+        },
+        {
+          "rank": 3,
+          "chunk_id": "DOC-0004-chunk-013",
+          "doc_id": "DOC-0004",
+          "text": "**Figura 3. ** Prognóstico das anomalias de temperatura da superfície do mar (ºC) produzidos em maio de 2026 para JJA 2026 por 4 conjuntos de modelos climáticos dinâmicos acoplados: a) conjunto de modelos da Organização Meteorológica Mundial (OMM), b) conjunto de modelos do Copernicus Climate Change Service (C3S), c) conjunto de modelos da América do Norte (North American Multi-Model Ensemble, NMME), d) conjunto de modelos do APEC Climate Center (APCC). Fonte: World Meteorological Organization (WMO), Copernicus Climate Change Service (C3S), _National Oceanic and Atmospheric Administration_ (NOAA) e APEC Climate Center (APCC). Além disso, de forma complementar, as previsões divulgadas pelo _Climate Prediction Center_ , vinculado à NOAA, no início de junho de 2026 (Figura 04), indicam alta probabilidade (superior a 95%) para a ocorrência de condições de El Niño, com persistência do fenômeno até o início de 2027. Neste contexto, os dados observacionais e os resultados dos modelos de previsão indicam alta probabilidade de estabelecimento de um evento de El Niño nos próximos meses de 2026.",
+          "score_fusion": 0.5,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8589966297149658,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 1.0,
+          "rank_bm25": null,
+          "rank_faiss": 1,
+          "fuente": "INPE_nota-tecnica-el-nino-2026-final-160626.pdf",
+          "num_tokens": 280,
+          "padding": false
+        },
+        {
+          "rank": 4,
+          "chunk_id": "DOC-0005-chunk-011",
+          "doc_id": "DOC-0005",
+          "text": "**Figura 3. ** Prognóstico das anomalias de temperatura da superfície do mar (ºC) produzidos em abril de 2026 para MJJ 2026 por 4 conjuntos de modelos climáticos dinâmicos acoplados: a) conjunto de modelos da Organização Meteorológica Mundial (OMM), b) conjunto de modelos do Copernicus Climate Change Service (C3S), c) conjunto de modelos da América do Norte (North American Multi-Model Ensemble, NMME), d) conjunto de modelos do APEC Climate Center (APCC). Fonte: World Meteorological Organization (WMO), Copernicus Climate Change Service (C3S), _National Oceanic and Atmospheric Administration_ (NOAA) e APEC Climate Center (APCC). Além disso, de forma complementar, as previsões divulgadas pelo _Climate Prediction Center_ , vinculado à NOAA, no início de abril de 2026 (Figura 04), indicam aproximadamente 61% de probabilidade para a ocorrência de condições de El Niño no trimestre maio–junho–julho (MJJ) de 2026, com persistência e aumento de probabilidade de ocorrência (superior a 90%) do fenômeno até o final de 2026 e início de 2027. Neste contexto, os dados observacionais e os resultados dos modelos de previsão indicam alta probabilidade de estabelecimento de um evento de El Niño ao longo do segundo semestre de 2026.",
+          "score_fusion": 0.4515690319941774,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8541975021362305,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 0.9031380639883548,
+          "rank_bm25": null,
+          "rank_faiss": 3,
+          "fuente": "INPE_notatecnicaconjuntaelnino2026-inpeinmetfuncemecensipam.pdf",
+          "num_tokens": 313,
+          "padding": false
+        },
+        {
+          "rank": 5,
+          "chunk_id": "DOC-0004-chunk-000",
+          "doc_id": "DOC-0004",
+          "text": "**Nota Técnica - EL NIÑO 2026** - **Junho/2026** - **INTRODUÇÃO**: Esta nota técnica apresenta informações sobre atualização das condições observacionais e previsão para o estabelecimento da fase positiva do fenômeno El Niño–Oscilação Sul (ENOS). O ENOS consiste em um sistema oceânico-atmosférico acoplado que ocorre na região do oceano Pacífico equatorial e na atmosfera adjacente, caracterizado por variações anômalas na temperatura da superfície do mar (TSM) e na circulação atmosférica. Essas alterações exercem influência em escala global, afetando os padrões de circulação atmosférica, o transporte de umidade, bem como os regimes de temperatura do ar e de precipitação. O El Niño corresponde à fase quente do ENOS, sendo caracterizado pelo aquecimento anômalo das águas superficiais do oceano Pacífico equatorial em relação à média climatológica. Por sua vez, a La Niña representa a fase fria do fenômeno, associada ao resfriamento anômalo das águas superficiais nessa mesma região. Conforme observado históricamente, o El Niño pode provocar impactos marcantes nos padrões de precipitação e na temperatura do ar em grande parte do território brasileiro. De acordo com as previsões atuais, o fenômeno tem alta probabilidade (superior a 95%) de se configurar ao longo do segundo semestre de 2026, podendo se estender até, pelo menos, o início de 2027.",
+          "score_fusion": 0.4293222816377843,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8519930243492126,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 0.8586445632755686,
+          "rank_bm25": null,
+          "rank_faiss": 5,
+          "fuente": "INPE_nota-tecnica-el-nino-2026-final-160626.pdf",
+          "num_tokens": 332,
+          "padding": false
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "pregunta": "¿Cuál es la probabilidad general de que el El Niño permanezca hasta al menos el inicio de 2027?",
+      "documents": [
+        {
+          "rank": 1,
+          "doc_id": "DOC-0006"
+        },
+        {
+          "rank": 2,
+          "doc_id": "DOC-0005"
+        },
+        {
+          "rank": 3,
+          "doc_id": "DOC-0004"
+        }
+      ],
+      "fragments": [
+        {
+          "rank": 1,
+          "chunk_id": "DOC-0006-chunk-002",
+          "doc_id": "DOC-0006",
+          "text": "**PAINEL EL NIÑO 2026-2027** - Boletim Mensal N° 01 - Junho de 2026: Este boletim é o resultado de ação conjunta entre o Instituto Nacional de Pesquisas Espaciais (INPE), o Instituto Nacional de Meteorologia (INMET), a Agência Nacional de Águas e Saneamento Básico (ANA), o Centro Nacional de Monitoramento e Alerta de Desastres Naturais (CEMADEN), o Serviço Geológico do Brasil (SGB) e a Secretaria Nacional de Proteção e Defesa Civil (SEDEC), com o objetivo de apresentar o monitoramento e previsões sobre o fenômeno El Niño em 2026 e 2027, bem como informar sobre possíveis impactos. Em junho de 2026 foi confirmada a configuração do El Niño. Os modelos indicam probabilidade acima de 90% de permanência do fenômeno até, pelo menos o início de 2027, com alta probabilidade de ocorrência de um El Niño muito forte, quando as anomalias/desvios de temperatura da superfície do mar (TSM) no Oceano Pacífico Equatorial ficam acima de 2,0°C, entre a primavera e o verão de 2026. Com isso, a previsão climática para o trimestre julho-agosto-setembro de 2026 indica, de forma geral, chuvas acima da média em áreas da Região Sul do Sul e, chuvas abaixo da média no centro-norte do País. Diante desse cenário, a colheita do milho segunda safra, algodão e cana-deaçúcar na Região Centro-Oeste e as culturas de inverno na Região Sul podem ser beneficiadas.",
+          "score_fusion": 0.790443134049053,
+          "score_bm25_raw": 25.995826721191406,
+          "score_faiss_raw": 0.8583188652992249,
+          "score_bm25_normalized": 0.764414751069954,
+          "score_faiss_normalized": 0.816471517028152,
+          "rank_bm25": 2,
+          "rank_faiss": 7,
+          "fuente": "INPE_painelelniojunho26.pdf",
+          "num_tokens": 358,
+          "padding": false
+        },
+        {
+          "rank": 2,
+          "chunk_id": "DOC-0005-chunk-000",
+          "doc_id": "DOC-0005",
+          "text": "**Nota Técnica - EL NIÑO 2026** - **Abril/2026** - **INTRODUÇÃO**: Esta nota técnica apresenta informações sobre as condições previstas para o estabelecimento da fase positiva do fenômeno El Niño–Oscilação Sul (ENOS). O ENOS consiste em um sistema oceânico-atmosférico acoplado que ocorre na região do oceano Pacífico equatorial e na atmosfera adjacente, caracterizado por variações anômalas na temperatura da superfície do mar (TSM) e na circulação atmosférica. Essas alterações exercem influência em escala global, afetando os padrões de circulação atmosférica, o transporte de umidade, bem como os regimes de temperatura do ar e de precipitação. O El Niño corresponde à fase quente do ENOS, sendo caracterizado pelo aquecimento anômalo das águas superficiais do oceano Pacífico equatorial em relação à média climatológica. Por sua vez, a La Niña representa a fase fria do fenômeno, associada ao resfriamento anômalo das águas superficiais nessa mesma região. Conforme observado históricamente, o El Niño pode provocar impactos marcantes nos padrões de precipitação e na temperatura do ar em grande parte do território brasileiro. De acordo com as previsões atuais, o fenômeno tem alta probabilidade (superior a 80%) de se configurar ao longo do segundo semestre de 2026, podendo se estender até, pelo menos, o início de 2027.",
+          "score_fusion": 0.6603010635905868,
+          "score_bm25_raw": 25.084476470947266,
+          "score_faiss_raw": 0.8473193645477295,
+          "score_bm25_normalized": 0.6759352190794766,
+          "score_faiss_normalized": 0.6446669081016969,
+          "rank_bm25": 3,
+          "rank_faiss": 10,
+          "fuente": "INPE_notatecnicaconjuntaelnino2026-inpeinmetfuncemecensipam.pdf",
+          "num_tokens": 328,
+          "padding": false
+        },
+        {
+          "rank": 3,
+          "chunk_id": "DOC-0004-chunk-000",
+          "doc_id": "DOC-0004",
+          "text": "**Nota Técnica - EL NIÑO 2026** - **Junho/2026** - **INTRODUÇÃO**: Esta nota técnica apresenta informações sobre atualização das condições observacionais e previsão para o estabelecimento da fase positiva do fenômeno El Niño–Oscilação Sul (ENOS). O ENOS consiste em um sistema oceânico-atmosférico acoplado que ocorre na região do oceano Pacífico equatorial e na atmosfera adjacente, caracterizado por variações anômalas na temperatura da superfície do mar (TSM) e na circulação atmosférica. Essas alterações exercem influência em escala global, afetando os padrões de circulação atmosférica, o transporte de umidade, bem como os regimes de temperatura do ar e de precipitação. O El Niño corresponde à fase quente do ENOS, sendo caracterizado pelo aquecimento anômalo das águas superficiais do oceano Pacífico equatorial em relação à média climatológica. Por sua vez, a La Niña representa a fase fria do fenômeno, associada ao resfriamento anômalo das águas superficiais nessa mesma região. Conforme observado históricamente, o El Niño pode provocar impactos marcantes nos padrões de precipitação e na temperatura do ar em grande parte do território brasileiro. De acordo com as previsões atuais, o fenômeno tem alta probabilidade (superior a 95%) de se configurar ao longo do segundo semestre de 2026, podendo se estender até, pelo menos, o início de 2027.",
+          "score_fusion": 0.651634586213578,
+          "score_bm25_raw": 24.994770050048828,
+          "score_faiss_raw": 0.846767246723175,
+          "score_bm25_normalized": 0.6672259636252664,
+          "score_faiss_normalized": 0.6360432088018895,
+          "rank_bm25": 4,
+          "rank_faiss": 12,
+          "fuente": "INPE_nota-tecnica-el-nino-2026-final-160626.pdf",
+          "num_tokens": 332,
+          "padding": false
+        },
+        {
+          "rank": 4,
+          "chunk_id": "DOC-0004-chunk-014",
+          "doc_id": "DOC-0004",
+          "text": "Neste contexto, os dados observacionais e os resultados dos modelos de previsão indicam alta probabilidade de estabelecimento de um evento de El Niño nos próximos meses de 2026. Embora a intensidade do evento ainda não esteja claramente definida, as características identificadas no diagnóstico, especialmente o elevado conteúdo de calor nas águas subsuperficiais do Pacífico equatorial, em conjunto com as previsões de temperatura da superfície do mar apontada pelos modelos climáticos, sugerem condições favoráveis ao desenvolvimento de um episódio de El Niño com intensidade forte a muito forte nos próximos meses, especialmente a partir do final do inverno. Ressalta-se que o monitoramento contínuo das condições oceânicas e atmosféricas será mantido, permitindo a atualização das previsões nos próximos meses. Official NOAA CPC ENSO Probabilities (issued June 2026)based on -0.5°/+0.5°C thresholds in ERSSTv5 Relative Nino-3.4 index/RONI|100El Nifio|901 NeutralLa Nifa|807016050140]> 30120-10;01MJ)JAJAS ASO SON OND NDJ | DFSeason]JFM]|[0]",
+          "score_fusion": 0.5,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8700689673423767,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 1.0,
+          "rank_bm25": null,
+          "rank_faiss": 1,
+          "fuente": "INPE_nota-tecnica-el-nino-2026-final-160626.pdf",
+          "num_tokens": 262,
+          "padding": false
+        },
+        {
+          "rank": 5,
+          "chunk_id": "DOC-0006-chunk-006",
+          "doc_id": "DOC-0006",
+          "text": "PROGNÓSTICO – PREVISÃO EL NIÑO No Oceano Pacífico Equatorial, as médias mensais da região Niño 3.4 (170°W–120°W), vêm registrando anomalias positivas de temperatura da superfície do mar (TSM) desde março de 2026, apresentando aquecimento com estrutura espacial características das condições de El Niño. Previsões de diversos centros mundiais indicam a continuidade e intensificação do fenômeno nos próximos meses. Entre essas previsões, as da agência APEC Climate Center (APCC), sediada na Coréia do Sul, indicam 100% de probabilidade de manutenção das condições de El Niño no trimestre julho-agosto- setembro (JAS) de 2026, e 99,4% de probabilidade de ocorrência de condições de El Niño de forte intensidade (Figura 2). As previsões da NOAA (National Oceanic and Atmospheric Administration) também indicam alta probabilidade de ocorrência de um fenômeno na categoria forte, porém apenas a partir do trimestre agosto-setembro- outubro. Figura 2: Previsão probabilística de El Niño/La Niña da APCC.",
+          "score_fusion": 0.48051684474827605,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8675742149353027,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 0.9610336894965521,
+          "rank_bm25": null,
+          "rank_faiss": 2,
+          "fuente": "INPE_painelelniojunho26.pdf",
+          "num_tokens": 245,
+          "padding": false
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "pregunta": "Según la previsión climática para julio-agosto-setembro de 2026, ¿dónde se esperan lluvias por encima de la media y dónde por debajo?",
+      "documents": [
+        {
+          "rank": 1,
+          "doc_id": "DOC-0003"
+        },
+        {
+          "rank": 2,
+          "doc_id": "DOC-0006"
+        },
+        {
+          "rank": 3,
+          "doc_id": "DOC-0008"
+        }
+      ],
+      "fragments": [
+        {
+          "rank": 1,
+          "chunk_id": "DOC-0003-chunk-279",
+          "doc_id": "DOC-0003",
+          "text": "El subindicador de Cómputo en la nube se sitúa levemente por encima del promedio, lo que constituye un punto de apoyo para usos avanzados. En el indicador de Dispositivos, el país sobresale en el subindicador Adopción de protocolo de internet versión 6 (IPv6), que alcanza a casi la mitad de los usuarios con un puntaje de 90,1, además de una mayor tenencia de computadoras en el hogar y mejores condiciones de asequibilidad de teléfonos inteligentes frente a la media regional. En la subdimensión Datos, el puntaje se eleva hasta 63,01 y se ubica por encima del promedio regional (posición 3; vs. 47,73 regional). El avance es consistente en los tres componentes: mayor puntuación en los subindicadores de Disponibilidad, Capacidad y Gobernanza de datos, lo que crea condiciones favorables para el uso de datos tanto en el sector público como en el privado. En Talento humano, México obtiene 37,67 puntos (posición 7), apenas por encima del promedio regional (37,32). El indicador Alfabetización en IA alcanza 57,46 (posición 10), por debajo de la media (60,61), y se suma una debilidad en Habilidad en inglés (26,9). En contraste, según el indicador Formación profesional en IA, es una fortaleza relativa (38,26; posición 4), asociada a una mayor proporción de Licenciados en STEM y una mejor Concentración de habilidades de IA en el mercado laboral. Sin embargo, el talento humano avanzado sigue rezagado (10,71; posición 8, vs.",
+          "score_fusion": 0.5,
+          "score_bm25_raw": 29.57303810119629,
+          "score_faiss_raw": 0.0,
+          "score_bm25_normalized": 1.0,
+          "score_faiss_normalized": 0.0,
+          "rank_bm25": 1,
+          "rank_faiss": null,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 350,
+          "padding": false
+        },
+        {
+          "rank": 2,
+          "chunk_id": "DOC-0006-chunk-007",
+          "doc_id": "DOC-0006",
+          "text": "**PROGNÓSTICO CLIMÁTICO SAZONAL**: A previsão elaborada pelo Centro de Previsão de Tempo e Estudos Climáticos (CPTEC)/Instituto Nacional de Pesquisas Espaciais (INPE), pelo Instituto Nacional de Meteorologia (INMET) e pela Fundação Cearense de Meteorologia (FUNCEME) para o trimestre julho-agosto-setembro de 2026 indica maior probabilidade de que a precipitação fique abaixo da média em boa parte do centro-norte do Brasil com destaque para a maior parte do Nordeste e pontos do oeste e sul da Região Norte. Por outro lado, na maior parte da Região Sul, é maior a probabilidade de que os acumulados de chuva no próximo trimestre se concentrem acima da faixa normal de precipitação. A respeito da temperatura, na maior parte do Brasil, é maior a probabilidade de que as temperaturas fiquem acima da normal climatológica no próximo trimestre o que indica maior potencial para episódios de ondas de calor na faixa central do país. Além disso, a combinação de temperaturas acima da média e precipitações abaixo da média em áreas do Centro-Oeste, Norte e Nordeste aumenta o potencial para queimadas nos próximos meses. Multi-modelo CPTEC/INMET/FUNCEMEProbab. tercil mais provavel: Temp. 2m (%)Produzida: Jun 2026Valida para JAS 2026ile.IFUNCEME INMET (ineeBRANCO: Igual probabilidade para as tres categorias.—80| -70] -50] —40| 40| 50| 70] 80] Multi—=modelo CPTEC/INMET/FUNCEME]Probab. tercil mais provavel: Precip.",
+          "score_fusion": 0.5,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8530449867248535,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 1.0,
+          "rank_bm25": null,
+          "rank_faiss": 1,
+          "fuente": "INPE_painelelniojunho26.pdf",
+          "num_tokens": 370,
+          "padding": false
+        },
+        {
+          "rank": 3,
+          "chunk_id": "DOC-0003-chunk-049",
+          "doc_id": "DOC-0003",
+          "text": "En la subdimensión de Infraestructura, el país obtiene 52,17 puntos, situándose en la sexta posición y más de seis puntos por encima del promedio regional. Argentina destaca en conectividad, con el 93,38% de los hogares con acceso a Internet y el 89,23% de la población usuaria, ubicándose entre los primeros lugares de la región. La velocidad de descarga móvil (63,62 Mbps) se mantiene en torno a la media regional, mientras que la cobertura 5G alcanza solo al 4,77% de la población, muy por debajo del promedio regional (21,4%), lo que limita el despliegue de aplicaciones avanzadas. En cómputo, el desempeño es heterogéneo: el índice de IXP (99,42 puntos) es el segundo más alto de la región, pero el país cuenta únicamente con siete centros de datos certificados, lo que evidencia una brecha en infraestructura crítica. En servicios de nube, Argentina se mantiene levemente por encima de la media regional, y en cómputo de alto rendimiento (HPC) alcanza un puntaje de 32,87, el tercero más alto de América Latina y el Caribe. En contraste, la adopción de IPv6 se sitúa en 25,79%, ligeramente por debajo del promedio regional. En la subdimensión de Datos, Argentina registra 58,57 puntos, ubicándose en la séptima posición regional, con más de diez puntos por encima de la media.",
+          "score_fusion": 0.4269932793775056,
+          "score_bm25_raw": 28.337522506713867,
+          "score_faiss_raw": 0.0,
+          "score_bm25_normalized": 0.8539865587550112,
+          "score_faiss_normalized": 0.0,
+          "rank_bm25": 2,
+          "rank_faiss": null,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 317,
+          "padding": false
+        },
+        {
+          "rank": 4,
+          "chunk_id": "DOC-0003-chunk-336",
+          "doc_id": "DOC-0003",
+          "text": "En Infraestructura, obtiene 45,9 puntos (posición 10), prácticamente en línea con la región (45,95). La conectividad es una fortaleza relativa (64,09 vs. 61,08), con una cobertura 5G del 42,6% de la población y de redes móviles del 86,9%. A ello se suma una velocidad de banda ancha fija de 200,8 Mbps que sitúa a Perú entre los primeros lugares de la región, mientras que la velocidad móvil promedia 32,2 Mbps y queda por debajo de la media regional. En contraste, el indicador de Cómputo constituye el principal rezago (10,93 vs. 21,31; posición 16), reflejando restricciones para escalar usos intensivos en IA. No se observa capacidad de cómputo de alto rendimiento (HPC, por sus siglas en inglés), ni de Unidades de Procesamiento Gráfico (GPU). La densidad de servidores seguros por millón de habitantes resulta baja, aunque el indicador de Nube se ubica levemente por encima de la media regional. El indicador de Dispositivos se ubica sobre la media (44,50 vs. 40,34; posición 8), lo que sugiere una base digital razonable para el acceso y uso de herramientas. El país cuenta con una adopción de IPv6 de 37,7% y se encuentra en el sexto lugar regional, a pesar de que solo un tercio de los hogares cuenta con computadora y el acceso a Internet en el hogar llega a 55,3%, aún por debajo de la media regional.",
+          "score_fusion": 0.4159321468461087,
+          "score_bm25_raw": 28.150331497192383,
+          "score_faiss_raw": 0.0,
+          "score_bm25_normalized": 0.8318642936922174,
+          "score_faiss_normalized": 0.0,
+          "rank_bm25": 3,
+          "rank_faiss": null,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 328,
+          "padding": false
+        },
+        {
+          "rank": 5,
+          "chunk_id": "DOC-0006-chunk-006",
+          "doc_id": "DOC-0006",
+          "text": "PROGNÓSTICO – PREVISÃO EL NIÑO No Oceano Pacífico Equatorial, as médias mensais da região Niño 3.4 (170°W–120°W), vêm registrando anomalias positivas de temperatura da superfície do mar (TSM) desde março de 2026, apresentando aquecimento com estrutura espacial características das condições de El Niño. Previsões de diversos centros mundiais indicam a continuidade e intensificação do fenômeno nos próximos meses. Entre essas previsões, as da agência APEC Climate Center (APCC), sediada na Coréia do Sul, indicam 100% de probabilidade de manutenção das condições de El Niño no trimestre julho-agosto- setembro (JAS) de 2026, e 99,4% de probabilidade de ocorrência de condições de El Niño de forte intensidade (Figura 2). As previsões da NOAA (National Oceanic and Atmospheric Administration) também indicam alta probabilidade de ocorrência de um fenômeno na categoria forte, porém apenas a partir do trimestre agosto-setembro- outubro. Figura 2: Previsão probabilística de El Niño/La Niña da APCC.",
+          "score_fusion": 0.41300097951334885,
+          "score_bm25_raw": 22.292043685913086,
+          "score_faiss_raw": 0.8401061296463013,
+          "score_bm25_normalized": 0.13953085253739284,
+          "score_faiss_normalized": 0.6864711064893049,
+          "rank_bm25": 44,
+          "rank_faiss": 5,
+          "fuente": "INPE_painelelniojunho26.pdf",
+          "num_tokens": 245,
+          "padding": false
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "pregunta": "¿Cuál es el nombre completo del índice al que pertenece este documento (ILIA 2025)?",
+      "documents": [
+        {
+          "rank": 1,
+          "doc_id": "DOC-0003"
+        },
+        {
+          "rank": 2,
+          "doc_id": "DOC-0008"
+        },
+        {
+          "rank": 3,
+          "doc_id": "DOC-0007"
+        }
+      ],
+      "fragments": [
+        {
+          "rank": 1,
+          "chunk_id": "DOC-0003-chunk-559",
+          "doc_id": "DOC-0003",
+          "text": "El presente documento complementa al Índice Latinoamericano de Inteligencia Artificial (ILIA), publicado en 2025, al incluir un análisis a nivel nacional y una descripción de su marco metodológico. Mediante la elaboración de fichas de 19 países de América Latina y el Caribe, se profundiza en los resultados del índice y se determina cuáles son las brechas estructurales y los desafíos de los ecosistemas nacionales de inteligencia artificial (IA). Las fichas ofrecen una lectura sintética y estandarizada del desempeño relativo en las tres dimensiones del ILIA —factores habilitantes; investigación, desarrollo y adopción, y gobernanza— e incorporan un análisis del uso efectivo de las soluciones de IA. Se incluye un anexo metodológico que detalla las fuentes utilizadas, los criterios de construcción de los indicadores y los métodos de normalización, imputación y ponderación aplicados en esta edición. El documento fortalece la transparencia y comparabilidad del ILIA y constituye un insumo clave para el análisis comparado y el seguimiento de las políticas públicas orientadas al desarrollo y la gobernanza de la IA en la región. Google aws UNIVERSIDADDE CHILE] UNIVERSIDACHCATOLICADE CHILE| BIDMejorando vidas] Ministerio de.Tecnologia,Ciencia,& Innovacién.Conocimien BANCOCAF DE AMERICA LATINA|DE DESARROLLO}Y EL CARIBE HAHuman-CenteredStanford University OEA Mas derechos|para més gente [ITH unesco Linked [[}} OTICSOFOFACapital Humanol| CENTROMEXICO]DIGITAL Sensor Tower",
+          "score_fusion": 0.8376732967840437,
+          "score_bm25_raw": 23.186382293701172,
+          "score_faiss_raw": 0.896061360836029,
+          "score_bm25_normalized": 1.0,
+          "score_faiss_normalized": 0.6753465935680873,
+          "rank_bm25": 1,
+          "rank_faiss": 4,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 348,
+          "padding": false
+        },
+        {
+          "rank": 2,
+          "chunk_id": "DOC-0003-chunk-038",
+          "doc_id": "DOC-0003",
+          "text": "La presente publicación amplía el Índice Latinoamericano de Inteligencia Artificial (ILIA) 2025 con el propósito de facilitar su interpretación y fortalecer su uso como herramienta para el análisis comparado y la formulación de políticas públicas basadas en evidencia. Para ello, ofrece dos aportes complementarios: fichas país, que sintetizan resultados y hallazgos a nivel nacional, y un anexo metodológico, que documenta en detalle la construcción del índice. Las fichas país buscan acercar los resultados del ILIA 2025 a la escala nacional, permitiendo identificar con mayor precisión fortalezas, brechas y desafíos en las tres dimensiones que estructuran el índice: i) Factores habilitantes para el acceso y uso de la IA, ii) Investigación, desarrollo y adopción, y iii) Gobernanza de la inteligencia artificial. Su objetivo es ofrecer una lectura clara y comparable del desempeño relativo de cada país, destacando tanto capacidades instaladas como restricciones relevantes del ecosistema. Cada ficha sigue una estructura analítica común. En primer lugar, presenta una síntesis del desempeño del país en cada dimensión del ILIA. En segundo lugar, profundiza en el análisis por subdimensiones (para 2024 y 2025), combinando la comparación con el promedio regional, la identificación de ámbitos de desempeño relativo destacado y un diagnóstico orientado a reconocer patrones estructurales, brechas persistentes y oportunidades de fortalecimiento.",
+          "score_fusion": 0.8027822559889434,
+          "score_bm25_raw": 19.437482833862305,
+          "score_faiss_raw": 0.9051995873451233,
+          "score_bm25_normalized": 0.6055645119778867,
+          "score_faiss_normalized": 1.0,
+          "rank_bm25": 4,
+          "rank_faiss": 1,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 299,
+          "padding": false
+        },
+        {
+          "rank": 3,
+          "chunk_id": "DOC-0003-chunk-443",
+          "doc_id": "DOC-0003",
+          "text": "En una última instancia, se citó a una reunión online con el CTA el día 1 de agosto de 2025, donde se\nexpusieron los principales contenidos referentes a la actual versión. Luego de esta reunión, se les dio acceso\nal documento borrador de ILIA 2025, con un plazo de 10 días corridos para hacer comentarios, observaciones\ny consultas sobre los datos que pudieran generar dudas. Las preguntas recibidas en ese periodo fueron\natendidas a la brevedad y corregidas en el documento en los casos que lo ameritaban. B. Dimensión Factores Habilitantes\n1. Inclusión de nuevos subindicadores\na) Número de GPUs Este subindicador se construye en base a datos proporcionados por una fuente primaria, el Sistema de\nCómputo Avanzado para Latinoamérica y el Caribe (SCALAC - RedCLARA), un consorcio de computación\nacadémica, de alto rendimiento y de investigadores de varios países de la región. El subindicador cuenta la\ncantidad de tarjetas GPU o hardware equivalente en los supercomputadores o clústeres de cómputo entregados\npor la fuente. El valor bruto corresponde a la suma de todas estas tarjetas por país y luego se normaliza por\npoblación para la obtención del puntaje ILIA. b) Capacidad de GPUs",
+          "score_fusion": 0.7460583898982909,
+          "score_bm25_raw": 19.28087043762207,
+          "score_faiss_raw": 0.9024701118469238,
+          "score_bm25_normalized": 0.5890867462754199,
+          "score_faiss_normalized": 0.903030033521162,
+          "rank_bm25": 5,
+          "rank_faiss": 2,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 276,
+          "padding": false
+        },
+        {
+          "rank": 4,
+          "chunk_id": "DOC-0003-chunk-043",
+          "doc_id": "DOC-0003",
+          "text": "Finalmente, el anexo metodológico presenta de manera detallada la metodología utilizada para la construcción del ILIA 2025, incluyendo la definición y cálculo de subindicadores, fuentes de información, criterios de normalización, técnicas de agregación, métodos de imputación de valores faltantes y esquemas de ponderación aplicados a indicadores, subdimensiones y dimensiones. Asimismo, documenta los análisis de consistencia y validación realizados para asegurar robustez y comparabilidad, contribuyendo a la transparencia metodológica y al uso del índice en ejercicios de seguimiento, análisis comparado y diseño de políticas públicas. En conjunto, esta publicación permite una lectura más fina a nivel país y refuerza la base metodológica necesaria para interpretar, comparar y utilizar los resultados del ILIA 2025, con miras a orientar decisiones sobre el desarrollo y la gobernanza de la inteligencia artificial en América Latina y el Caribe. **22**",
+          "score_fusion": 0.498367821344821,
+          "score_bm25_raw": 15.393270492553711,
+          "score_faiss_raw": 0.9000394940376282,
+          "score_bm25_normalized": 0.1800580705280882,
+          "score_faiss_normalized": 0.8166775721615538,
+          "rank_bm25": 27,
+          "rank_faiss": 3,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 186,
+          "padding": false
+        },
+        {
+          "rank": 5,
+          "chunk_id": "DOC-0003-chunk-003",
+          "doc_id": "DOC-0003",
+          "text": "Las Naciones Unidas y los países que representan no son responsables por el contenido de vínculos a sitios web externos incluidos en esta publicación. No deberá entenderse que existe adhesión de las Naciones Unidas o los países que representan a empresas, productos o servicios comerciales mencionados en esta publicación. Las opiniones expresadas en este documento, que no ha sido sometido a revisión editorial, son de exclusiva responsabilidad de los autores y pueden no coincidir con las de las Naciones Unidas o las de los países que representan. Publicación de las Naciones Unidas LC/TS.2026/16 Distribución: L Copyright © Naciones Unidas, 2026 Todos los derechos reservados Impreso en Naciones Unidas, Santiago S.2600050[S] Esta publicación debe citarse como: Soto, Á., Durán, R., Moreno, A., Adasme, S., Rovira, S., Jordán, V. y Poveda, L. (Coords.) (2026). Índice Latinoamericano de Inteligencia Artificial (ILIA) 2025: fichas de país y aspectos metodológicos. _Documentos de Proyectos_ (LC/TS.2026/16). Comisión Económica para América Latina y el Caribe y Centro Nacional de Inteligencia Artificial. La autorización para reproducir total o parcialmente esta obra debe solicitarse a la Comisión Económica para América Latina y el Caribe (CEPAL), División de Documentos y Publicaciones, publicaciones.cepal@un.org. Los Estados Miembros de las Naciones Unidas y sus instituciones gubernamentales pueden reproducir esta obra sin autorización previa.",
+          "score_fusion": 0.4060211531493516,
+          "score_bm25_raw": 15.934340476989746,
+          "score_faiss_raw": 0.8932384252548218,
+          "score_bm25_normalized": 0.23698603182751385,
+          "score_faiss_normalized": 0.5750562744711893,
+          "rank_bm25": 18,
+          "rank_faiss": 9,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 348,
+          "padding": false
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "pregunta": "¿Qué organizaciones aparecen en la portada junto al logo de ILIA (CEPAL, CENIA, etc.)?",
+      "documents": [
+        {
+          "rank": 1,
+          "doc_id": "DOC-0003"
+        },
+        {
+          "rank": 2,
+          "doc_id": "DOC-0008"
+        },
+        {
+          "rank": 3,
+          "doc_id": "DOC-0007"
+        }
+      ],
+      "fragments": [
+        {
+          "rank": 1,
+          "chunk_id": "DOC-0003-chunk-024",
+          "doc_id": "DOC-0003",
+          "text": "Estos ejemplos son una luz que indica que el futuro brillante de la IA en la región requiere una fórmula basada en la colaboración; una que no dispute el talento, sino que lo comparta. Esperamos que esta nueva versión del ILIA sea un faro que aporte a la discusión y toma de decisiones que permitan construir un ecosistema virtuoso de IA para la región y cada uno de sus ciudadanos. Centro Nacional de Inteligencia Artificial (CENIA) **Rodrigo Durán** **Álvaro Soto** Director Director Ejecutivo Índice Latinoamericano de Inteligencia Artificial (ILIA) **12**",
+          "score_fusion": 0.7698018310754215,
+          "score_bm25_raw": 16.949283599853516,
+          "score_faiss_raw": 0.8667318820953369,
+          "score_bm25_normalized": 0.5396036621508431,
+          "score_faiss_normalized": 1.0,
+          "rank_bm25": 6,
+          "rank_faiss": 1,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 128,
+          "padding": false
+        },
+        {
+          "rank": 2,
+          "chunk_id": "DOC-0003-chunk-002",
+          "doc_id": "DOC-0003",
+          "text": "Este documento fue coordinado por Álvaro Soto, Rodrigo Durán, Antonia Moreno y Sebastián Adasme, del Centro Nacional de Inteligencia Artificial (CENIA) de Chile, y Sebastián Rovira, Valeria Jordán y Laura Poveda, funcionarios de la División de Desarrollo Productivo y Empresarial de la Comisión Económica para América Latina y el Caribe (CEPAL). El documento se elaboró en el marco de la Alianza Digital Unión Europea-América Latina y el Caribe y contó con el financiamiento de la Unión Europea, a través de la estrategia Global Gateway. En su elaboración participaron Rodrigo Oportot y Verona Leisseigneur, del CENIA, quienes contaron con el apoyo de Demetris Herakleous y Francisca Lira, funcionarios, y Tomás Rodrigues, Consultor, todos de la CEPAL, y de Salma Jalife, Alberto Farca y Susana Cruz, del Centro México Digital. Ni la Unión Europea ni ninguna persona que actúe en su nombre es responsable del uso que pueda hacerse de la información contenida en esta publicación. Los puntos de vista expresados en este estudio son de los autores y no reflejan necesariamente los puntos de vista de la Unión Europea. Las Naciones Unidas y los países que representan no son responsables por el contenido de vínculos a sitios web externos incluidos en esta publicación.",
+          "score_fusion": 0.6781062082841934,
+          "score_bm25_raw": 19.057422637939453,
+          "score_faiss_raw": 0.8483177423477173,
+          "score_bm25_normalized": 0.7782692431023727,
+          "score_faiss_normalized": 0.5779431734660142,
+          "rank_bm25": 2,
+          "rank_faiss": 3,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 286,
+          "padding": false
+        },
+        {
+          "rank": 3,
+          "chunk_id": "DOC-0003-chunk-015",
+          "doc_id": "DOC-0003",
+          "text": "Esto implica transformaciones profundas, con impactos transversales en los sistemas productivos, el empleo, el bienestar social y la calidad de la gobernanza. En particular, para que la digitalización sea verdaderamente transformadora, debe considerarse un componente esencial de las agendas nacionales y subnacionales de desarrollo, incluidas, entre otras, las políticas de desarrollo productivo. En este sentido, resulta indispensable contar con herramientas de diagnóstico, seguimiento y análisis que orienten la formulación de políticas públicas innovadoras, oportunas y basadas en datos, capaces de aprovechar el potencial transformador de las tecnologías digitales en general, y de la IA en particular. El Índice Latinoamericano de Inteligencia Artificial (ILIA), elaborado desde 2023 en conjunto con el Centro Nacional de Inteligencia Artificial (CENIA) de Chile y con el apoyo de diversas organizaciones académicas, públicas y privadas, responde a este imperativo. Se trata de un esfuerzo pionero y sistemático para medir el estado de avance de la IA en 19 países de la región, que complementa iniciativas como el Observatorio de Desarrollo Digital de la Comisión Económica para América Latina y el Caribe (CEPAL), que desde 2024 produce, recopila y analiza más de 85 indicadores en 12 áreas clave para la transformación digital.",
+          "score_fusion": 0.5972318991450609,
+          "score_bm25_raw": 21.015975952148438,
+          "score_faiss_raw": 0.8315867185592651,
+          "score_bm25_normalized": 1.0,
+          "score_faiss_normalized": 0.1944637982901219,
+          "rank_bm25": 1,
+          "rank_faiss": 16,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 268,
+          "padding": false
+        },
+        {
+          "rank": 4,
+          "chunk_id": "DOC-0003-chunk-006",
+          "doc_id": "DOC-0003",
+          "text": "- Universidad Adolfo Ibáñez. - Loreto Aravena, Soledad Cofré, Andrés Carvallo y Felipe Urrutia, del equipo de operaciones del CENIA y todos los miembros de su Comité Técnico Asesor.",
+          "score_fusion": 0.372189480069182,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8555792570114136,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 0.744378960138364,
+          "rank_bm25": null,
+          "rank_faiss": 2,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 48,
+          "padding": false
+        },
+        {
+          "rank": 5,
+          "chunk_id": "DOC-0008-chunk-016",
+          "doc_id": "DOC-0008",
+          "text": "Desafíos de gestión del conocimiento para la construcción de paz: 4 lecciones y experiencias de Colombia Después de ocho años de la firma del Acuerdo de Paz (2016) entre el Go- bierno de Colombia y la antigua guerrilla de las FARC-EP, vale la pena preguntarse qué conocimiento tenemos sobre la paz ¿Cuáles son las nuevas explicaciones al conflicto vivido en Colombia por más de 60 años? ¿Qué formas de construcción de paz alternativas al modelo liberal hemos identi- ficado? ¿Qué conocimiento derivado de la investigación del caso colombia- no contribuye a la construcción de paz en otros lugares del mundo? Respon- der a estas preguntas será el trabajo que académicos, expertos y ciudadanos deberán realizar a partir del conocimiento acumulado sobre este tema. Pero acceder al conocimiento acumulado depende no solo de su disponibi- lidad sino de la forma en que circula ¿Dónde ha quedado ese conocimiento? ¿Cómo se ha producido, circulado y almacenado? ¿Tenemos una memoria disponible de manera que podamos seguir investigando el caso colombia- no? Preocupados por la producción y circulación de la información que se ha producido sobre el estudio del conflicto y la construcción de paz en Co- lombia, nos dimos a la tarea de identificar los esfuerzos realizados por dis- tintos tipos de organizaciones para cumplir con este objetivo.",
+          "score_fusion": 0.3708780667187931,
+          "score_bm25_raw": 18.734901428222656,
+          "score_faiss_raw": 0.0,
+          "score_bm25_normalized": 0.7417561334375862,
+          "score_faiss_normalized": 0.0,
+          "rank_bm25": 3,
+          "rank_faiss": null,
+          "fuente": "MAPPOEA_desafios-de-gestion-del-conocimiento-para-la-construccion-de-paz-af.pdf",
+          "num_tokens": 286,
+          "padding": false
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "pregunta": "¿Quiénes coordinaron la elaboración del documento según la página de créditos?",
+      "documents": [
+        {
+          "rank": 1,
+          "doc_id": "DOC-0003"
+        },
+        {
+          "rank": 2,
+          "doc_id": "DOC-0008"
+        },
+        {
+          "rank": 3,
+          "doc_id": "DOC-0007"
+        }
+      ],
+      "fragments": [
+        {
+          "rank": 1,
+          "chunk_id": "DOC-0003-chunk-002",
+          "doc_id": "DOC-0003",
+          "text": "Este documento fue coordinado por Álvaro Soto, Rodrigo Durán, Antonia Moreno y Sebastián Adasme, del Centro Nacional de Inteligencia Artificial (CENIA) de Chile, y Sebastián Rovira, Valeria Jordán y Laura Poveda, funcionarios de la División de Desarrollo Productivo y Empresarial de la Comisión Económica para América Latina y el Caribe (CEPAL). El documento se elaboró en el marco de la Alianza Digital Unión Europea-América Latina y el Caribe y contó con el financiamiento de la Unión Europea, a través de la estrategia Global Gateway. En su elaboración participaron Rodrigo Oportot y Verona Leisseigneur, del CENIA, quienes contaron con el apoyo de Demetris Herakleous y Francisca Lira, funcionarios, y Tomás Rodrigues, Consultor, todos de la CEPAL, y de Salma Jalife, Alberto Farca y Susana Cruz, del Centro México Digital. Ni la Unión Europea ni ninguna persona que actúe en su nombre es responsable del uso que pueda hacerse de la información contenida en esta publicación. Los puntos de vista expresados en este estudio son de los autores y no reflejan necesariamente los puntos de vista de la Unión Europea. Las Naciones Unidas y los países que representan no son responsables por el contenido de vínculos a sitios web externos incluidos en esta publicación.",
+          "score_fusion": 0.7704619672324615,
+          "score_bm25_raw": 16.45509910583496,
+          "score_faiss_raw": 0.8517258167266846,
+          "score_bm25_normalized": 0.540923934464923,
+          "score_faiss_normalized": 1.0,
+          "rank_bm25": 3,
+          "rank_faiss": 1,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 286,
+          "padding": false
+        },
+        {
+          "rank": 2,
+          "chunk_id": "DOC-0003-chunk-199",
+          "doc_id": "DOC-0003",
+          "text": "**a) Agenda Legislativa en materia de Inteligencia Artificial**: Ecuador no cuenta con una ley específica en materia de inteligencia artificial. No obstante, en diciembre de 2024 se presentó un proyecto borrador para una política nacional de IA, la que ha recibido comentarios y se encuentra actualmente en proceso de revisión y elaboración de un nuevo documento. Del mismo modo, existen otras iniciativas legislativas presentadas en el Legislativo, según lo informado por la Dirección de Fomento de Tecnologías Emergentes de Ecuador. **88**",
+          "score_fusion": 0.5,
+          "score_bm25_raw": 20.6248722076416,
+          "score_faiss_raw": 0.0,
+          "score_bm25_normalized": 1.0,
+          "score_faiss_normalized": 0.0,
+          "rank_bm25": 1,
+          "rank_faiss": null,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 107,
+          "padding": false
+        },
+        {
+          "rank": 3,
+          "chunk_id": "DOC-0003-chunk-533",
+          "doc_id": "DOC-0003",
+          "text": "i) Antigüedad de la estrategia: Este subindicador asigna puntaje según una serie de categorías relacionadas con el año en el que se adoptó la estrategia, por lo que la categorización es la siguiente: Cuadro 78 Subindicador antigüedad de la estrategia Subindicador Categoría Puntaje Antigüedad de la estrategia 0: No existe 1: 2019 - 2021 2: 2022 - 2023 3: 2024 - 2025 0 = 0 puntos 1 = 33,3 puntos 2 = 66,7 puntos 3 = 100 puntos Fuente: Elaboración propia. ii) Autoridad de elaboración: Este subindicador asigna puntaje según la autoridad que elaboró la estrategia de IA en el país, por lo que la categorización es la siguiente: Cuadro 79 Subindicador autoridad de elaboración estrategia Subindicador Categoría Puntaje Autoridad de elaboración 0: No existe 1: Directorio / oficina 2: Ministerio 3: Presidencia 0 = 0 puntos 1 = 33,3 puntos 2 = 66,7 puntos 3 = 100 puntos Fuente: Elaboración propia.",
+          "score_fusion": 0.4789165431828184,
+          "score_bm25_raw": 17.052865982055664,
+          "score_faiss_raw": 0.8278806805610657,
+          "score_bm25_normalized": 0.6067357805636222,
+          "score_faiss_normalized": 0.3510973058020146,
+          "rank_bm25": 2,
+          "rank_faiss": 9,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 222,
+          "padding": false
+        },
+        {
+          "rank": 4,
+          "chunk_id": "DOC-0008-chunk-081",
+          "doc_id": "DOC-0008",
+          "text": "En la actualidad el equipo de trabajo a cargo de la implementación del Sistema de Gestión del Conocimiento está conformado por profesionales de diferentes disciplinas: ciencia política, derecho, ingeniería industrial, gestión documental y conservación del patrimonio. El equipo cuenta con el liderazgo y compromiso de la Jefatura de la misión, y de la Dirección del Departamento de Sustentabilidad Democrática y Misiones Especiales, aspecto que permite una gestión del conocimiento transversal a todas las áreas de la MAPP/OEA. De esta forma, se trabaja de manera conjunta con todos los procesos, así como con las oficinas regionales desplegadas en el territorio colombiano, con el fin de definir las fuentes de conocimiento y revisar las fortalezas colectivas e individuales.",
+          "score_fusion": 0.4238544386952361,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8461295962333679,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 0.8477088773904722,
+          "rank_bm25": null,
+          "rank_faiss": 2,
+          "fuente": "MAPPOEA_desafios-de-gestion-del-conocimiento-para-la-construccion-de-paz-af.pdf",
+          "num_tokens": 159,
+          "padding": false
+        },
+        {
+          "rank": 5,
+          "chunk_id": "DOC-0003-chunk-178",
+          "doc_id": "DOC-0003",
+          "text": "Si bien no incorpora explícitamente una perspectiva de género, sí contempla lineamientos vinculados a la soberanía tecnológica, la sostenibilidad digital, el impacto ambiental, el desarrollo económico y la seguridad, reforzando el carácter transversal de la estrategia. La gobernanza del ecosistema se apoya en una coordinación interministerial liderada por el Ministerio de Comunicaciones de Cuba (MINCOM), que incluye la creación de una Secretaría permanente y un sistema de gobernanza con supervisión directa del Consejo de Ministros. Entre los actores involucrados destacan el Ministerio de Educación Superior (MES), el Ministerio de Ciencia, Tecnología y Medio Ambiente (CITMA), universidades como la Universidad de las Ciencias Informáticas (UCI), Universidad Tecnológica de La Habana “José Antonio Echeverría” (CUJAE) y la Universidad Central “Marta Abreu” de Las Villas (UCLV), el sector estatal, la sociedad civil y organismos multilaterales como la Organización de las Naciones Unidas para la Educación, la Ciencia y la Cultura (UNESCO). Si bien la estrategia no cuenta con un presupuesto específico centralizado, cada institución debe incorporar las inversiones necesarias dentro de sus propios planes. En términos operativos, cada eje incluye proyectos impulsores, laboratorios provinciales y hojas de ruta, vinculados al Plan Nacional de Desarrollo Económico y Social.",
+          "score_fusion": 0.3738406514087363,
+          "score_bm25_raw": 0.0,
+          "score_faiss_raw": 0.8424538969993591,
+          "score_bm25_normalized": 0.0,
+          "score_faiss_normalized": 0.7476813028174726,
+          "rank_bm25": null,
+          "rank_faiss": 3,
+          "fuente": "ILIA_2025.-fichas-de-pais-y-aspectos-metodologicos.pdf",
+          "num_tokens": 282,
+          "padding": false
+        }
+      ]
+    }
+  ]
+}

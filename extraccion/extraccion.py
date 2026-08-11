@@ -460,7 +460,21 @@ def _ocr_rapidocr(imagen: Any) -> tuple[str, float]:
     global _RAPIDOCR
     try:
         if _RAPIDOCR is None:
-            _RAPIDOCR = RapidOCR()
+            # Detectar automáticamente los proveedores disponibles en ONNX Runtime
+            providers = []
+            try:
+                import onnxruntime as ort
+                providers = ort.get_available_providers()
+            except Exception:
+                pass
+
+            if "CUDAExecutionProvider" in providers:
+                _RAPIDOCR = RapidOCR(det_use_cuda=True, rec_use_cuda=True, cls_use_cuda=True)
+            elif "DmlExecutionProvider" in providers:
+                _RAPIDOCR = RapidOCR(det_use_dml=True, rec_use_dml=True, cls_use_dml=True)
+            else:
+                _RAPIDOCR = RapidOCR()
+                
         resultado, _ = _RAPIDOCR(imagen)
     except Exception as exc:  # el motor OCR nunca debe tumbar la extracción
         logger.warning("RapidOCR falló: %s", exc)
