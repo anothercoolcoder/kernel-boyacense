@@ -78,6 +78,18 @@ def resolver_archivo(
             if f"{registro['Carpeta'].rstrip('/')}/{registro['Nombre estandarizado']}" == relativa
         ]
         candidatos = exactos or candidatos
+    if len(candidatos) > 1:
+        # Permite procesar una copia del corpus con otra raíz local. La ruta
+        # todavía debe conservar la carpeta oficial completa; nombre solo no
+        # basta porque el inventario contiene duplicados legítimos.
+        ruta_partes = ruta.parts
+        por_sufijo = [
+            registro for registro in candidatos
+            if tuple(registro.get("Carpeta", "").strip("/").split("/"))
+            and ruta_partes[-(len(registro["Carpeta"].strip("/").split("/")) + 1):]
+            == tuple(registro["Carpeta"].strip("/").split("/")) + (ruta.name,)
+        ]
+        candidatos = por_sufijo or candidatos
     if len(candidatos) != 1:
         raise ValueError(f"No hay resolucion oficial unica para {ruta.name}: {len(candidatos)} candidatos")
     registro = candidatos[0]

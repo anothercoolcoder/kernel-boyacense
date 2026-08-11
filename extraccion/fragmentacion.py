@@ -305,6 +305,7 @@ def _ajustar_grupo(
     limite_tokens: int,
     limite_palabras: int,
     tokenizador: Any,
+    cache_tokens: Dict[str, int] | None = None,
 ) -> List[List[int]]:
     """Revalida grupos con el texto concatenado, no solo costes individuales."""
     salida: List[List[int]] = []
@@ -312,8 +313,10 @@ def _ajustar_grupo(
     for indice in grupo:
         candidato = actual + [indice]
         texto = " ".join(textos[i] for i in candidato).strip()
+        if cache_tokens is not None and texto not in cache_tokens:
+            cache_tokens[texto] = contar_tokens(texto, tokenizador)
         excede = (
-            contar_tokens(texto, tokenizador) > limite_tokens
+            (cache_tokens[texto] if cache_tokens is not None else contar_tokens(texto, tokenizador)) > limite_tokens
             or contar_palabras(texto) > limite_palabras
         )
         if actual and excede:
@@ -341,6 +344,7 @@ def _fragmentar_detallado(
         unidades.extend(_unidades_seccion(cuerpo, titulo, nivel, idioma))
 
     salida: List[tuple[str, int, int, str, int, bool]] = []
+    cache_tokens: Dict[str, int] = {}
     cursor = 0
     while cursor < len(unidades):
         titulo = unidades[cursor][1]
@@ -351,15 +355,21 @@ def _fragmentar_detallado(
 
         bloque = unidades[cursor:fin]
         textos = [unidad[0] for unidad in bloque]
-        costos = [contar_tokens(unidad, tokenizador) for unidad in textos]
+        costos = []
+        for unidad in textos:
+            cache_tokens.setdefault(unidad, contar_tokens(unidad, tokenizador))
+            costos.append(cache_tokens[unidad])
         palabras = [contar_palabras(unidad) for unidad in textos]
         grupos = _empacar(textos, costos, max_tokens, solape, palabras, max_words)
         for grupo in grupos:
-            for subgrupo in _ajustar_grupo(textos, grupo, max_tokens, max_words, tokenizador):
+            for subgrupo in _ajustar_grupo(
+                textos, grupo, max_tokens, max_words, tokenizador, cache_tokens
+            ):
                 fragmento = " ".join(textos[i] for i in subgrupo).strip()
                 if not fragmento:
                     continue
-                num_tokens = contar_tokens(fragmento, tokenizador)
+                cache_tokens.setdefault(fragmento, contar_tokens(fragmento, tokenizador))
+                num_tokens = cache_tokens[fragmento]
                 num_palabras = contar_palabras(fragmento)
                 oversize = num_tokens > max_tokens or num_palabras > max_words
                 salida.append((fragmento, num_tokens, num_palabras, titulo, nivel, oversize))

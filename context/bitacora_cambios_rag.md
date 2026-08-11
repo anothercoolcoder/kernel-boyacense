@@ -767,3 +767,61 @@ venv/bin/python benchmark_rag.py \
 - Delta piloto reranker-baseline: NDCG `-0.0311886469000458`, F1 `0.0`.
 - Artefactos: `resultados_benchmark_oficial_prueba_reranker_piloto.json`, `resultados_benchmark_oficial_prueba_baseline_piloto.json`.
 - Decisión: no promover reranker; baseline oficial permanece congelado.
+
+## 2026-08-11 - Robustez y rendimiento de extracción masiva
+
+### Causa del corte
+
+- `OCR on page.number=17/18` fue diagnóstico del motor OCR, no comando ni causa
+  fatal de Python.
+- El corte real ocurrió en `main.py`: `resolver_archivo()` lanzó `ValueError` al
+  encontrar seis filas para el mismo nombre estandarizado de CSET.
+- Las seis filas son legítimas y se distinguen por carpeta oficial; elegir una
+  por nombre habría asignado `doc_id` incorrecto.
+
+### Implementado
+
+- `main.py`: errores de resolución ambigua y extracción quedan aislados por
+  archivo; el lote continúa y reporta cantidad omitida.
+- `lib/inventario_oficial.py`: intenta coincidencia por sufijo de carpeta cuando
+  el corpus fue copiado bajo una raíz local distinta.
+- `extraccion/extraccion.py`: PyMuPDF abre cada PDF una vez; texto nativo y OCR
+  reutilizan el mismo documento, evitando reapertura por página.
+- `extraccion/fragmentacion.py`: conteos de tokens cacheados durante el
+  empaquetado y revalidación; evita recálculo repetido de textos iguales.
+
+### Verificación pendiente
+
+- Ejecutar `venv/bin/python -m py_compile main.py extraccion/extraccion.py extraccion/fragmentacion.py`.
+- Ejecutar suite disponible y un dry-run con corpus completo.
+
+## 2026-08-11 - Progreso visible en ejecución masiva
+
+### Implementado
+
+- `main.py`: barra de progreso documental sin dependencia externa.
+- Muestra documentos completados, porcentaje, registros, errores, tiempo
+  transcurrido y ETA estimada.
+- Actualiza una línea en terminal interactiva; emite checkpoints cada 25
+  documentos cuando la salida no es TTY.
+- Registra tiempo de extracción y tiempo total, incluyendo indexación.
+
+## 2026-08-11 - Checkpoint y reanudación de extracción
+
+### Implementado
+
+- `main.py`: escribe `checkpoint_extraccion.jsonl` después de cada documento.
+- Cada evento contiene ruta, estado y registros extraídos; `fsync` reduce pérdida
+  ante caída de proceso o máquina.
+- `--resume` recupera documentos exitosos y reintenta fallidos o incompletos.
+- Línea final truncada por interrupción se ignora al cargar checkpoint.
+
+### Uso operativo
+
+```bash
+venv/bin/python main.py corpus_adl --checkpoint estado.jsonl
+venv/bin/python main.py corpus_adl --resume --checkpoint estado.jsonl
+```
+
+Sin `--resume`, el checkpoint indicado se reinicia. No cambiar corpus ni ruta
+de checkpoint entre reanudaciones.

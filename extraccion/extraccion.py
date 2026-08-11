@@ -542,7 +542,24 @@ def extraer_pdf(ruta: Path) -> List[Registro]:
         logger.warning("pymupdf4llm falló en %s, usando pymupdf puro: %s", ruta.name, exc)
         paginas = []
 
-    crudos = _texto_crudo_pdf(ruta)
+    try:
+        import pymupdf
+    except ImportError:
+        pymupdf = None
+
+    documento_pdf = None
+    if pymupdf is not None:
+        try:
+            documento_pdf = pymupdf.open(str(ruta))
+            crudos = [_normalizar_texto_pdf(p.get_text()).strip() for p in documento_pdf]
+        except Exception as exc:
+            logger.warning("Texto plano falló en %s: %s", ruta.name, exc)
+            if documento_pdf is not None:
+                documento_pdf.close()
+            documento_pdf = None
+            crudos = []
+    else:
+        crudos = []
     
     if not paginas and not crudos:
         raise ErrorExtraccion(f"PDF ilegible {ruta}")
@@ -563,11 +580,13 @@ def extraer_pdf(ruta: Path) -> List[Registro]:
             metadata["origen_texto"] = "nativo_plano"
             
         if not texto:
-            texto, confianza = _ocr_pagina_pdf(ruta, indice - 1)
+            texto, confianza = _ocr_pagina_pdf(ruta, indice - 1, documento=documento_pdf)
             metadata.update(origen_texto="ocr", confianza=round(confianza, 4))
             
         registros.append(_registro(ruta, "pdf", indice, texto, metadata))
 
+    if documento_pdf is not None:
+        documento_pdf.close()
     registros = _limpiar_boilerplate_pdf(registros)
     logger.info("PDF %s: %d páginas con texto", ruta.name, len(registros))
     return registros
@@ -617,7 +636,12 @@ def _texto_crudo_pdf(ruta: Path) -> List[str]:
         return []
 
 
-def _ocr_pagina_pdf(ruta: Path, indice_pagina: int, dpi: int = 300) -> tuple[str, float]:
+def _ocr_pagina_pdf(
+    ruta: Path,
+    indice_pagina: int,
+    dpi: int = 300,
+    documento: Any = None,
+) -> tuple[str, float]:
     """Rasteriza una página y le aplica OCR. Devuelve ``(texto, confianza)``."""
     try:
         import numpy as np
@@ -627,11 +651,16 @@ def _ocr_pagina_pdf(ruta: Path, indice_pagina: int, dpi: int = 300) -> tuple[str
         return "", 0.0
 
     try:
-        with pymupdf.open(str(ruta)) as doc:
+        propio = documento is None
+        doc = documento or pymupdf.open(str(ruta))
+        try:
             pix = doc[indice_pagina].get_pixmap(dpi=dpi)
             arreglo = np.frombuffer(pix.samples, dtype=np.uint8).reshape(
                 pix.height, pix.width, pix.n
             )
+        finally:
+            if propio:
+                doc.close()
         return _ocr(arreglo[:, :, :3])
     except Exception as exc:
         logger.warning("OCR falló en %s p.%d: %s", ruta.name, indice_pagina + 1, exc)
