@@ -1,20 +1,39 @@
-pymupdf4llm
+# --- Procesamiento de Documentos y PDF / OCR ---
 pymupdf
-numpy
-beautifulsoup4
-lxml
-pandas
-openpyxl
+pymupdf4llm
 Pillow
-# pytesseract requiere el binario de Tesseract-OCR instalado aparte (no es paquete pip):
+pytesseract
+# Nota para pytesseract: requiere el ejecutable de Tesseract-OCR instalado en el sistema.
 # Windows: https://github.com/UB-Mannheim/tesseract/wiki (default: C:\Program Files\Tesseract-OCR)
 # Linux: apt install tesseract-ocr | macOS: brew install tesseract
-pytesseract
 rapidocr-onnxruntime
-nltk
+onnxruntime
+beautifulsoup4
+lxml
+
+# --- Datos y Excel ---
+numpy
+pandas
+openpyxl
+
+# --- Machine Learning & RAG / Embeddings / Vector Search ---
+torch
+torchvision
 transformers
 sentence-transformers
+huggingface-hub
 faiss-cpu
 langchain-huggingface
+langchain-core
+nltk
+scikit-learn
+scipy
+tqdm
+requests
+
+# --- Datos Geográficos y Datos Especiales ---
 mapbox-vector-tile
 pyrosm
+geopandas
+shapely
+
