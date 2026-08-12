@@ -159,35 +159,55 @@ def indexar(fragmentos: List[dict], faiss_dir: str = BASE_VECTORIAL_DIR) -> None
         except Exception:
             pass
 
+    logger.info("Cargando modelo de embeddings %s en %s…", MODELO_EMBEDDINGS, device)
     embeddings_model = HuggingFaceEmbeddings(
         model_name=MODELO_EMBEDDINGS,
         model_kwargs={"device": device},
         encode_kwargs={
             "normalize_embeddings": True,
-            "batch_size": 32,
+            "batch_size": 64,
         },
     )
 
-    # Generar vectores de embeddings con barra de progreso explícita tqdm lote por lote
-    from tqdm import tqdm
-    batch_size = 32
-    vectors_list = []
-    for i in tqdm(range(0, len(textos), batch_size), desc="Etapa 3: Generando embeddings FAISS", unit="lote"):
-        lote = textos[i : i + batch_size]
-        vecs = embeddings_model._client.encode(
-            lote,
-            normalize_embeddings=True,
-            show_progress_bar=False,
-            convert_to_numpy=True,
-        )
-        vectors_list.append(vecs)
+    st_client = embeddings_model._client
+    device_real = next(st_client.parameters()).device
+    logger.info("Modelo de embeddings cargado en device real: %s", device_real)
 
-    vectors_np = np.vstack(vectors_list)
+    if device == "cuda" and str(device_real).startswith("cuda"):
+        try:
+            st_client = st_client.half()
+            logger.info("Precisión fp16 (half) activada para GPU CUDA.")
+        except Exception as exc:
+            logger.warning("No se pudo activar fp16: %s", exc)
+
+    import time
+    t0 = time.perf_counter()
+    
+    # Generar vectores de embeddings directamente usando el cliente optimizado
+    vectors_np = st_client.encode(
+        textos,
+        batch_size=64,
+        normalize_embeddings=True,
+        show_progress_bar=True,
+        convert_to_numpy=True,
+    )
+
+    dt = time.perf_counter() - t0
+    velocidad = len(textos) / dt if dt > 0 else 0
+    logger.info("Embeddings completados: %d fragmentos en %.2fs (%.1f emb/s)", len(textos), dt, velocidad)
+
+    try:
+        import torch
+        if torch.cuda.is_available():
+            vram_pico = torch.cuda.max_memory_allocated() / 1e9
+            logger.info("VRAM pico consumida: %.2f GB", vram_pico)
+    except Exception:
+        pass
 
     # Crear índice FAISS (Inner Product ≡ coseno con vectores normalizados)
     dimension = vectors_np.shape[1]
     index = faiss.IndexFlatIP(dimension)
-    index.add(vectors_np)
+    index.add(vectors_np.astype(np.float32))
 
     # chunk_id pertenece al contrato documental y ya es determinista desde
     # fragmentación. El ordinal FAISS es interno y no debe sobrescribirlo.

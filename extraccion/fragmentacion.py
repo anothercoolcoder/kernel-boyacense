@@ -309,18 +309,33 @@ def _ajustar_grupo(
     """Revalida grupos con el texto concatenado, no solo costes individuales."""
     salida: List[List[int]] = []
     actual: List[int] = []
-    for indice in grupo:
-        candidato = actual + [indice]
-        texto = " ".join(textos[i] for i in candidato).strip()
-        excede = (
-            contar_tokens(texto, tokenizador) > limite_tokens
-            or contar_palabras(texto) > limite_palabras
-        )
-        if actual and excede:
-            salida.append(actual)
-            actual = [indice]
-        else:
-            actual = candidato
+    
+    # Pre-calcular tokens y palabras por elemento individual del grupo
+    tokens_elem = [contar_tokens(textos[i], tokenizador) for i in grupo]
+    palabras_elem = [contar_palabras(textos[i]) for i in grupo]
+    
+    acc_tokens = 0
+    acc_palabras = 0
+    
+    for idx_pos, indice in enumerate(grupo):
+        t_elem = tokens_elem[idx_pos]
+        p_elem = palabras_elem[idx_pos]
+        
+        # Estimación rápida optimista acumulando tokens y palabras
+        if actual and (acc_tokens + t_elem > limite_tokens or acc_palabras + p_elem > limite_palabras):
+            # Verificación exacta de frontera solo cuando supera la cota estimada
+            candidato_texto = " ".join(textos[i] for i in (actual + [indice])).strip()
+            if contar_tokens(candidato_texto, tokenizador) > limite_tokens or contar_palabras(candidato_texto) > limite_palabras:
+                salida.append(actual)
+                actual = [indice]
+                acc_tokens = t_elem
+                acc_palabras = p_elem
+                continue
+        
+        actual.append(indice)
+        acc_tokens += t_elem
+        acc_palabras += p_elem
+
     if actual:
         salida.append(actual)
     return salida

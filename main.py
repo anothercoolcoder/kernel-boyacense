@@ -27,7 +27,12 @@ if not INVENTARIO_OFICIAL.is_file() and (BASE_DIR / "Indice_Datos_Codefest.xlsx"
     INVENTARIO_OFICIAL = BASE_DIR / "Indice_Datos_Codefest.xlsx"
 RAIZ_CORPUS_OFICIAL = BASE_DIR / "CORPUS CODEFEST AD ASTRA 2026"
 FAISS_DIR = str(BASE_DIR / "base_vectorial" / "encoder_multilingual-e5-large-instruct")
-FORMATOS_OFICIALES = (".pdf", ".json", ".csv", ".xlsx", ".jpg", ".avif", ".txt", ".pbf")
+FORMATOS_OFICIALES = (
+    ".pdf", ".html", ".htm", ".xhtml", ".md", ".markdown", ".mdx", ".txt", ".text", ".log",
+    ".json", ".csv", ".tsv", ".xlsx", ".xlsm", ".xls",
+    ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp",
+    ".pbf", ".mvt", ".gpkg", ".osm.pbf"
+)
 PIPELINE_VERSION = "checkpoint-v1"
 
 
