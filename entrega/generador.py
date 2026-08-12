@@ -20,9 +20,9 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_BASE_VECTORIAL = Path("./base_vectorial")
-DEFAULT_QUERIES = Path("consultas.jsonl")
-DEFAULT_OUTPUT = Path("./resultados.jsonl")
+DEFAULT_BASE_VECTORIAL = ROOT / "base_vectorial"
+DEFAULT_QUERIES = ROOT / "consultas.jsonl"
+DEFAULT_OUTPUT = ROOT / "resultados.jsonl"
 MODEL_NAME = "intfloat/multilingual-e5-large-instruct"
 QUERY_INSTRUCTION = (
     "Given a question, retrieve passages from documents that contain the exact "

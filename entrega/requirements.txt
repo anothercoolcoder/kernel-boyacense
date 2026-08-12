@@ -1,0 +1,7 @@
+# Runtime dependencies for generador.py. CPU-only execution is required.
+numpy
+faiss-cpu
+torch
+transformers
+sentence-transformers
+langchain-huggingface
