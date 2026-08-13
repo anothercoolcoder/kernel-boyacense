@@ -156,7 +156,7 @@ def main() -> None:
         choices=("minmax", "clipped_minmax", "percentile", "zsigmoid"),
         default="minmax",
     )
-    parser.add_argument("--alpha", type=float, default=0.5)
+    parser.add_argument("--alpha", type=float, default=0.4)
     args = parser.parse_args()
 
     from recuperar.recuperar import BuscadorHibrido

@@ -184,11 +184,11 @@ class BuscadorHibrido:
         pregunta: str,
         top_k_docs: int = 3,
         top_k_chunks: int = 10,
-        candidate_k: int = 60,
+        candidate_k: int = 100,
         rrf_k0: int = 60,
         fusion_method: str = "combsum",
         normalization_method: str = "minmax",
-        alpha: float = 0.5,
+        alpha: float = 0.4,
     ) -> Dict[str, Any]:
         """Ejecuta la búsqueda híbrida determinista y devuelve documentos y fragmentos ordenados."""
         if fusion_method not in {"combsum", "rrf"}:
