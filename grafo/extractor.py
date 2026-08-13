@@ -37,7 +37,7 @@ class ExtractorEntidades:
 
     def __init__(
         self,
-        model_name: str = "urchade/gliner_multi-v2.1",
+        model_name: str = "urchade/gliner_small-v2.1",
         labels: List[str] | None = None,
         threshold: float = 0.35,
         use_fallback: bool = True
@@ -48,18 +48,22 @@ class ExtractorEntidades:
         self.model = None
 
         try:
+            import torch
             from gliner import GLiNER
-            logger.info(f"Cargando modelo GLiNER: {model_name}")
-            self.model = GLiNER.from_pretrained(model_name)
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            logger.info(f"Cargando modelo GLiNER: {model_name} en dispositivo {device}")
+            
+            # gliner_small cabe perfectamente en 4GB incluso en fp32. 
+            self.model = GLiNER.from_pretrained(model_name).to(device)
+            
+            # Aumentar el límite a 512 tokens para evitar truncamientos
+            self.model.config.max_len = 512
         except Exception as e:
             logger.warning(f"No se pudo cargar GLiNER ({e}). Usando modo fallback de respaldo.")
             self.model = None
 
     def extraer(self, texto: str, threshold: float | None = None) -> List[Dict[str, Any]]:
-        """Extrae entidades nombradas de un fragmento de texto.
-        
-        Retorna una lista de diccionarios con claves: 'text', 'label', 'score'.
-        """
+        """Extrae entidades nombradas de un fragmento de texto."""
         if not texto or not texto.strip():
             return []
 
@@ -68,7 +72,6 @@ class ExtractorEntidades:
         if self.model is not None:
             try:
                 entities = self.model.predict_entities(texto, self.labels, threshold=th)
-                # Normalizar resultado
                 res = []
                 for ent in entities:
                     res.append({
@@ -84,6 +87,41 @@ class ExtractorEntidades:
             return self._extraer_fallback(texto)
 
         return []
+
+    def extraer_batch(self, textos: List[str], threshold: float | None = None) -> List[List[Dict[str, Any]]]:
+        """Extrae entidades de una lista de fragmentos (batch)."""
+        if not textos:
+            return []
+
+        th = threshold if threshold is not None else self.threshold
+
+        if self.model is not None:
+            try:
+                import torch
+                with torch.no_grad():
+                    # El límite max_len=512 ya fue configurado en la carga
+                    batch_entities = self.model.batch_predict_entities(textos, self.labels, threshold=th)
+                
+                res_final = []
+                for entities in batch_entities:
+                    res = []
+                    for ent in entities:
+                        res.append({
+                            "text": ent.get("text", "").strip(),
+                            "label": ent.get("label", "").lower(),
+                            "score": float(ent.get("score", 1.0))
+                        })
+                    res_final.append(res)
+                
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    
+                return res_final
+            except Exception as e:
+                logger.error(f"Error al ejecutar GLiNER batch: {e}")
+
+        # Fallback o si hay error, procesar secuencialmente (o con fallback regex)
+        return [self.extraer(texto, threshold=th) for texto in textos]
 
     def _extraer_fallback(self, texto: str) -> List[Dict[str, Any]]:
         """Extractor heurístico de respaldo (basado en expresiones regulares / mayúsculas)."""

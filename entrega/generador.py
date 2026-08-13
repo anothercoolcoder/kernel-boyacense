@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import networkx as nx
 
 
 ROOT = Path(__file__).resolve().parent
@@ -34,6 +35,7 @@ CANDIDATE_K = 60
 FUSION_METHOD = "combsum"
 NORMALIZATION_METHOD = "minmax"
 ALPHA = 0.1
+GRAPH_WEIGHT = 0.1
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("generador")
@@ -142,6 +144,20 @@ class Recuperador:
         self.bm25 = BM25Nativo([meta.get("texto", "") for meta in self.metadatos])
         self.embeddings_model = None
 
+        self.doc_pos_to_idx = {
+            (meta.get("doc_id"), meta.get("chunk_id")): idx
+            for idx, meta in enumerate(self.metadatos)
+            if meta.get("doc_id") is not None and meta.get("chunk_id") is not None
+        }
+
+        graph_path = ROOT / "grafo" / "grafo.graphml"
+        if graph_path.is_file():
+            self.graph = nx.read_graphml(str(graph_path))
+        else:
+            self.graph = nx.Graph()
+        
+        self.node_names = {str(n).lower(): n for n in self.graph.nodes()}
+
     @staticmethod
     def normalizar_scores(scores: dict[int, float]) -> dict[int, float]:
         if not scores:
@@ -188,6 +204,25 @@ class Recuperador:
                 encode_kwargs={"normalize_embeddings": True},
             )
 
+    def _calcular_graph_scores(self, pregunta: str) -> dict[int, float]:
+        pregunta_lower = pregunta.lower()
+        graph_scores: dict[int, float] = {}
+        for node_lower, node_id in self.node_names.items():
+            if len(node_lower) > 2 and re.search(r'\b' + re.escape(node_lower) + r'\b', pregunta_lower):
+                for _, _, data in self.graph.edges(node_id, data=True):
+                    evidencias = data.get("evidencias_json", "[]")
+                    try:
+                        ev_list = json.loads(evidencias)
+                        for ev in ev_list:
+                            doc_id = ev.get("doc_id")
+                            chunk_id = ev.get("chunk_id")
+                            idx = self.doc_pos_to_idx.get((doc_id, chunk_id))
+                            if idx is not None:
+                                graph_scores[idx] = graph_scores.get(idx, 0.0) + 1.0
+                    except Exception:
+                        continue
+        return graph_scores
+
     def buscar(
         self,
         pregunta: str,
@@ -215,12 +250,17 @@ class Recuperador:
 
         bm25_norm = self.normalizar_scores(bm25_scores)
         faiss_norm = self.normalizar_scores(faiss_scores)
-        candidatos = set(bm25_ranks) | set(faiss_ranks)
+
+        graph_scores = self._calcular_graph_scores(pregunta)
+        graph_norm = self.normalizar_scores(graph_scores)
+
+        candidatos = set(bm25_ranks) | set(faiss_ranks) | set(graph_norm.keys())
         fusionados = sorted(
             (
                 indice,
                 ALPHA * bm25_norm.get(indice, 0.0)
-                + (1.0 - ALPHA) * faiss_norm.get(indice, 0.0),
+                + (1.0 - ALPHA - GRAPH_WEIGHT) * faiss_norm.get(indice, 0.0)
+                + GRAPH_WEIGHT * graph_norm.get(indice, 0.0),
             )
             for indice in candidatos
         )

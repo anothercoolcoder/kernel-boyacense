@@ -49,78 +49,91 @@ class ConstructorGrafo:
         if limit_chunks:
             lines = lines[:limit_chunks]
 
-        for line in tqdm(lines, desc="Extrayendo entidades para Grafo"):
+        batch_size = 32
+        batch_chunks = []
+
+        for line in tqdm(lines, desc="Lectura de fragmentos"):
             if not line.strip():
                 continue
             chunk_data = json.loads(line.strip())
-
             doc_id = str(chunk_data.get("doc_id", ""))
             chunk_id = str(chunk_data.get("chunk_id", ""))
             texto = chunk_data.get("texto", "")
 
             if not doc_id or not chunk_id or not texto:
                 continue
+            
+            batch_chunks.append({"doc_id": doc_id, "chunk_id": chunk_id, "texto": texto})
 
-            entidades_extraidas = self.extractor.extraer(texto)
-            if not entidades_extraidas:
-                continue
+        for i in tqdm(range(0, len(batch_chunks), batch_size), desc="Extrayendo y construyendo grafo (Batch)"):
+            chunk_batch = batch_chunks[i:i+batch_size]
+            textos = [c["texto"] for c in chunk_batch]
+            
+            resultados_batch = self.extractor.extraer_batch(textos)
+            
+            for chunk, entidades_extraidas in zip(chunk_batch, resultados_batch):
+                if not entidades_extraidas:
+                    continue
 
-            # Agrupar entidades únicas en este fragmento
-            entidades_chunk: Dict[str, str] = {}
-            for ent in entidades_extraidas:
-                nombre_norm = normalizar_entidad(ent["text"])
-                if len(nombre_norm) >= 2:
-                    entidades_chunk[nombre_norm] = ent.get("label", "entidad")
+                doc_id = chunk["doc_id"]
+                chunk_id = chunk["chunk_id"]
 
-            # 1. Agregar / actualizar nodos
-            for nombre, label in entidades_chunk.items():
-                if self.graph.has_node(nombre):
-                    self.graph.nodes[nombre]["frecuencia"] += 1
-                else:
-                    self.graph.add_node(
-                        nombre,
-                        label=label,
-                        frecuencia=1
-                    )
+                # Agrupar entidades únicas en este fragmento
+                entidades_chunk: Dict[str, str] = {}
+                for ent in entidades_extraidas:
+                    nombre_norm = normalizar_entidad(ent["text"])
+                    if len(nombre_norm) >= 2:
+                        entidades_chunk[nombre_norm] = ent.get("label", "entidad")
 
-            # 2. Agregar / actualizar aristas por co-ocurrencia dentro del fragmento
-            nodos = list(entidades_chunk.keys())
-            for i in range(len(nodos)):
-                for j in range(i + 1, len(nodos)):
-                    u, v = nodos[i], nodos[j]
-
-                    if self.graph.has_edge(u, v):
-                        edge_data = self.graph[u][v]
-                        edge_data["weight"] += 1
-                        
-                        # Actualizar lista de evidencias sin duplicados
-                        evidencias = json.loads(edge_data.get("evidencias_json", "[]"))
-                        evidencia_nueva = {"doc_id": doc_id, "chunk_id": chunk_id}
-                        if evidencia_nueva not in evidencias:
-                            evidencias.append(evidencia_nueva)
-                        
-                        edge_data["evidencias_json"] = json.dumps(evidencias)
-                        # Mantener doc_id y chunk_id más recientes/representativos
-                        doc_ids = set(edge_data["doc_id"].split(","))
-                        doc_ids.add(doc_id)
-                        edge_data["doc_id"] = ",".join(doc_ids)
-
-                        chunk_refs = set(edge_data["chunk_id"].split(","))
-                        chunk_refs.add(f"{doc_id}:{chunk_id}")
-                        edge_data["chunk_id"] = ",".join(chunk_refs)
+                # 1. Agregar / actualizar nodos
+                for nombre, label in entidades_chunk.items():
+                    if self.graph.has_node(nombre):
+                        self.graph.nodes[nombre]["frecuencia"] += 1
                     else:
-                        evidencias = [{"doc_id": doc_id, "chunk_id": chunk_id}]
-                        self.graph.add_edge(
-                            u,
-                            v,
-                            weight=1,
-                            relacion="co_ocurre_con",
-                            doc_id=doc_id,
-                            chunk_id=f"{doc_id}:{chunk_id}",
-                            evidencias_json=json.dumps(evidencias)
+                        self.graph.add_node(
+                            nombre,
+                            label=label,
+                            frecuencia=1
                         )
 
-            count += 1
+                # 2. Agregar / actualizar aristas por co-ocurrencia dentro del fragmento
+                nodos = list(entidades_chunk.keys())
+                for j in range(len(nodos)):
+                    for k in range(j + 1, len(nodos)):
+                        u, v = nodos[j], nodos[k]
+
+                        if self.graph.has_edge(u, v):
+                            edge_data = self.graph[u][v]
+                            edge_data["weight"] += 1
+                            
+                            # Actualizar lista de evidencias sin duplicados
+                            evidencias = json.loads(edge_data.get("evidencias_json", "[]"))
+                            evidencia_nueva = {"doc_id": doc_id, "chunk_id": chunk_id}
+                            if evidencia_nueva not in evidencias:
+                                evidencias.append(evidencia_nueva)
+                            
+                            edge_data["evidencias_json"] = json.dumps(evidencias)
+                            # Mantener doc_id y chunk_id más recientes/representativos
+                            doc_ids = set(edge_data["doc_id"].split(","))
+                            doc_ids.add(doc_id)
+                            edge_data["doc_id"] = ",".join(doc_ids)
+
+                            chunk_refs = set(edge_data["chunk_id"].split(","))
+                            chunk_refs.add(f"{doc_id}:{chunk_id}")
+                            edge_data["chunk_id"] = ",".join(chunk_refs)
+                        else:
+                            evidencias = [{"doc_id": doc_id, "chunk_id": chunk_id}]
+                            self.graph.add_edge(
+                                u,
+                                v,
+                                weight=1,
+                                relacion="co_ocurre_con",
+                                doc_id=doc_id,
+                                chunk_id=f"{doc_id}:{chunk_id}",
+                                evidencias_json=json.dumps(evidencias)
+                            )
+
+                count += 1
 
         logger.info(f"Grafo construido con {self.graph.number_of_nodes()} nodos y {self.graph.number_of_edges()} aristas.")
         return self.graph
