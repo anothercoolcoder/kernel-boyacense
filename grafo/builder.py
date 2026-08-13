@@ -23,24 +23,19 @@ logger = logging.getLogger(__name__)
 
 
 class ConstructorGrafo:
-    """Construye un grafo de conocimiento NetworkX a partir de `metadata.jsonl`."""
+    """Clase responsable de la orquestación y construcción del grafo de conocimiento."""
 
-    def __init__(self, extractor: ExtractorEntidades | None = None) -> None:
-        self.extractor = extractor or ExtractorEntidades()
+    def __init__(self, use_fallback: bool = True, model_name: str = "urchade/gliner_small-v2.1"):
+        self.extractor = ExtractorEntidades(use_fallback=use_fallback, model_name=model_name)
         self.graph = nx.Graph()
 
-    def construir_desde_metadata(
-        self,
-        metadata_path: Path | str,
-        limit_chunks: int | None = None
-    ) -> nx.Graph:
-        """Procesa `metadata.jsonl`, extrae entidades y construye el grafo de co-ocurrencia."""
-        path = Path(metadata_path)
+    def construir_desde_metadata(self, path: str | Path, limit_chunks: int | None = None, batch_size: int = 32) -> nx.Graph:
+        """Lee el archivo metadata.jsonl, extrae entidades por lotes en GPU, y construye nodos y aristas."""
+        path = Path(path)
         if not path.exists():
-            raise FileNotFoundError(f"No se encontró el archivo de metadatos en: {path}")
+            raise FileNotFoundError(f"No se encontró el archivo de metadatos en {path}")
 
-        logger.info(f"Procesando metadatos para grafo desde {path}...")
-        self.graph = nx.Graph()
+        logger.info(f"Iniciando construcción del grafo desde {path.name}")
 
         count = 0
         with open(path, "r", encoding="utf-8") as f:
@@ -49,7 +44,6 @@ class ConstructorGrafo:
         if limit_chunks:
             lines = lines[:limit_chunks]
 
-        batch_size = 32
         batch_chunks = []
 
         for line in tqdm(lines, desc="Lectura de fragmentos"):

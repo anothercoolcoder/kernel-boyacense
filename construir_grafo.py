@@ -38,6 +38,18 @@ def main() -> None:
         default=None,
         help="Límite opcional de fragmentos a procesar (para pruebas rápidas)."
     )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=32,
+        help="Tamaño de lote para extracción (aumentar en GPUs con mayor VRAM)."
+    )
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        default="urchade/gliner_small-v2.1",
+        help="Nombre del modelo GLiNER a utilizar."
+    )
 
     args = parser.parse_args()
 
@@ -50,8 +62,8 @@ def main() -> None:
         sys.exit(1)
 
     print(f"[*] Iniciando construcción del grafo desde: {metadata_path}")
-    builder = ConstructorGrafo()
-    g = builder.construir_desde_metadata(metadata_path, limit_chunks=args.limit)
+    builder = ConstructorGrafo(model_name=args.model_name)
+    g = builder.construir_desde_metadata(metadata_path, limit_chunks=args.limit, batch_size=args.batch_size)
 
     print(f"[*] Nodos extraídos: {g.number_of_nodes()} | Aristas: {g.number_of_edges()}")
 
