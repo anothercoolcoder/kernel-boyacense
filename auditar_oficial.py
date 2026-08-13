@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -37,13 +38,28 @@ def auditar(
     metadata = cargar_jsonl(metadata_path)
     errores: list[str] = []
     ids = {registro.get("doc_id") for registro in metadata}
+    chunk_ids = [str(registro.get("chunk_id")) for registro in metadata]
+    if len(set(chunk_ids)) != len(chunk_ids):
+        errores.append("chunk_id duplicado en metadata")
+    for registro in metadata:
+        doc_id = str(registro.get("doc_id", ""))
+        chunk_id = str(registro.get("chunk_id", ""))
+        if not re.fullmatch(rf"{re.escape(doc_id)}-chunk-\d+", chunk_id):
+            errores.append(f"chunk_id invalido: {chunk_id}")
+    index_path = metadata_path.parent / "index.faiss"
+    if index_path.is_file():
+        try:
+            import faiss
+
+            if faiss.read_index(str(index_path)).ntotal != len(metadata):
+                errores.append("cantidad de vectores FAISS no coincide con metadata")
+        except ImportError:
+            errores.append("no se pudo importar faiss para auditar index.faiss")
     faltantes = oficiales - ids
     if faltantes:
         errores.append(f"documentos sin metadata: {len(faltantes)}")
     inventario_por_id = {registro["DOC_ID"]: registro for registro in inventario}
     for indice, registro in enumerate(metadata):
-        if str(registro.get("chunk_id")) != str(indice):
-            errores.append(f"chunk_id no coincide con FAISS ordinal: linea {indice}")
         doc_id = registro.get("doc_id")
         oficial = inventario_por_id.get(doc_id)
         if oficial is None:

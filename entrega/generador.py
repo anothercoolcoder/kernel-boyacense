@@ -256,6 +256,23 @@ class Recuperador:
             for indice, meta in enumerate(self.metadatos)
             if meta.get("doc_id") in seleccionados and indice not in indices_fusionados
         )
+
+        # Prioriza fragmentos con evidencia distinta, incluso entre documentos.
+        candidatos_sin_duplicados: list[tuple[int, float]] = []
+        textos_globales: list[str] = []
+        indices_priorizados: set[int] = set()
+        for indice, score in candidatos_chunks:
+            texto = self.metadatos[indice].get("texto", "")
+            if any(self.jaccard(texto, anterior) > 0.9 for anterior in textos_globales):
+                continue
+            candidatos_sin_duplicados.append((indice, score))
+            textos_globales.append(texto)
+            indices_priorizados.add(indice)
+        # Fallback mantiene cardinalidad contractual si evidencia única es insuficiente.
+        candidatos_chunks = candidatos_sin_duplicados + [
+            item for item in candidatos_chunks if item[0] not in indices_priorizados
+        ]
+
         for indice, score in candidatos_chunks:
             if len(chunks) >= top_k_chunks:
                 break
